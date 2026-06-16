@@ -1,0 +1,8 @@
+{
+  "name": "Zyng",
+  "description": "Nigeria's #1 AI Social Media Manager. Powered by Gemini. Multi-platform content, cultural localization, and AI-native social operations styled inside a slate twilight theme.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

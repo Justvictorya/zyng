@@ -1,0 +1,12 @@
+[
+  {
+    "id": "f906f4d6-9fd7-452e-b789-ad3db68c050f",
+    "name": "Victoria John",
+    "email": "victoryajohn0309@gmail.com",
+    "password": "password123",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+    "tier": "Pro",
+    "joined": "May 2026",
+    "balance_naira": 12000
+  }
+]
