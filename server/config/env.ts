@@ -1,0 +1,51 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+const REQUIRED_VARS = [
+  "SUPABASE_URL",
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "GEMINI_API_KEY",
+] as const;
+
+const OAUTH_VARS = [
+  "TIKTOK_CLIENT_ID",
+  "TIKTOK_CLIENT_SECRET",
+  "FACEBOOK_CLIENT_ID",
+  "FACEBOOK_CLIENT_SECRET",
+  "INSTAGRAM_CLIENT_ID",
+  "INSTAGRAM_CLIENT_SECRET",
+  "TWITTER_CLIENT_ID",
+  "TWITTER_CLIENT_SECRET",
+  "LINKEDIN_CLIENT_ID",
+  "LINKEDIN_CLIENT_SECRET",
+  "WHATSAPP_CLIENT_ID",
+  "WHATSAPP_CLIENT_SECRET",
+  "YOUTUBE_CLIENT_ID",
+  "YOUTUBE_CLIENT_SECRET",
+] as const;
+
+function validateEnv() {
+  const missing: string[] = [];
+
+  for (const key of REQUIRED_VARS) {
+    if (!process.env[key]) {
+      missing.push(key);
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error(`Missing required env vars: ${missing.join(", ")}`);
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    } else {
+      console.warn("Running in dev mode — some features may not work.");
+    }
+  }
+}
+
+function env(key: string, fallback?: string): string {
+  return process.env[key] || fallback || "";
+}
+
+export { validateEnv, env, REQUIRED_VARS, OAUTH_VARS };
