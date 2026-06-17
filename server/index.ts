@@ -8,7 +8,7 @@ validateEnv();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 app.use(express.json());
 
 app.use((req, res, next) => {

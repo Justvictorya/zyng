@@ -12,6 +12,7 @@ const aiLimiter = rateLimit({
   message: { success: false, error: "Rate limit. Try again in a minute." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 router.use(optionalAuth);

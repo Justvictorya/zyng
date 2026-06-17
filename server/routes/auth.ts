@@ -11,6 +11,7 @@ const authLimiter = rateLimit({
   message: { success: false, error: "Too many attempts. Try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
