@@ -186,7 +186,7 @@ Return ONLY valid JSON:
 }`;
 
     const geminiRes = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Draft a social post about: "${prompt}" using tone: "${tone || "Standard"}"`,
       config: { systemInstruction: systemPrompt, responseMimeType: "application/json", temperature: 1.0 }
     });
@@ -222,7 +222,7 @@ Return ONLY valid JSON:
 }`;
 
     const geminiRes = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Fix this post while preserving local context: "${text}"`,
       config: { systemInstruction: systemPrompt, responseMimeType: "application/json" }
     });
@@ -252,7 +252,7 @@ Return ONLY valid JSON:
 }`;
 
     const geminiRes = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Translate: "${text}" to vibe: "${targetVibe}"`,
       config: { systemInstruction: systemPrompt, responseMimeType: "application/json" }
     });
@@ -286,7 +286,7 @@ Return ONLY valid JSON:
 }`;
 
     const geminiRes = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Scan for algorithm red flags: "${text}"`,
       config: { systemInstruction: systemPrompt, responseMimeType: "application/json" }
     });
@@ -315,7 +315,7 @@ Return ONLY valid JSON:
 }`;
 
     const geminiRes = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Deconstruct viral mechanism for: "${url}"`,
       config: { systemInstruction: systemPrompt, responseMimeType: "application/json" }
     });
