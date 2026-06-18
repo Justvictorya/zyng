@@ -24,7 +24,7 @@ export default function Sidebar() {
   const menuItems = [
     { id: "dashboard", label: t.dashboard, icon: Layers },
     { id: "create-post", label: t.createPost, icon: PenSquare, badge: "AI" },
-    { id: "posts-history", label: t.postsHistory, icon: History },
+    { id: "posts", label: t.postsHistory, icon: History },
     { id: "analytics", label: t.analytics, icon: BarChart2 },
     { id: "settings", label: t.settings, icon: Settings },
   ];

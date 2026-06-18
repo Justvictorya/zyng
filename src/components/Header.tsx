@@ -44,7 +44,7 @@ export default function Header({ nepaDraftActive, onRecoverDraft }: HeaderProps)
         return { icon: Layers, title: t.dashboard, subtitle: "Manage your social schedule from Lagos to Abuja" };
       case "create-post":
         return { icon: PenSquare, title: t.createPost, subtitle: "Generate AI-caption, schedule cross-posting, or analyze red flags" };
-      case "posts-history":
+      case "posts":
         return { icon: History, title: t.postsHistory, subtitle: "Manage scheduled social content calendar queues" };
       case "analytics":
         return { icon: BarChart2, title: t.analytics, subtitle: "Check the pulse of your audience & growth charts" };
