@@ -17,14 +17,11 @@ import {
   MessageSquare,
   ArrowUpRight
 } from "lucide-react";
-import { DialectType } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface ViewAnalyticsProps {
-  dialect: DialectType;
-}
-
-export default function ViewAnalytics({ dialect }: ViewAnalyticsProps) {
+export default function ViewAnalytics() {
+  const { dialect } = useZyng();
   const t = translations[dialect];
   const [activeGeoFilter, setActiveGeoFilter] = useState("all");
 

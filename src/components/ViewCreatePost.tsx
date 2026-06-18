@@ -28,24 +28,14 @@ import {
   ThumbsUp,
   Eye
 } from "lucide-react";
-import { Post, DialectType, AIResponse, AIFixerResponse, AIFlagResponse, AIViralResponse } from "../types";
+import { useNavigate } from "react-router-dom";
+import { Post, AIResponse, AIFixerResponse, AIFlagResponse, AIViralResponse } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface ViewCreatePostProps {
-  dialect: DialectType;
-  onPostSaved: () => void;
-  setNepaDraftActive: (active: boolean) => void;
-  triggerDraftRecoverSignal: boolean;
-  onResetRecoverSignal: () => void;
-}
-
-export default function ViewCreatePost({ 
-  dialect, 
-  onPostSaved,
-  setNepaDraftActive,
-  triggerDraftRecoverSignal,
-  onResetRecoverSignal
-}: ViewCreatePostProps) {
+export default function ViewCreatePost() {
+  const { dialect, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
+  const navigate = useNavigate();
   const t = translations[dialect];
 
   // Base composer states
@@ -122,7 +112,7 @@ export default function ViewCreatePost({
           console.error("Failed to recover draft cache", e);
         }
       }
-      onResetRecoverSignal();
+      setTriggerDraftRecoverSignal(false);
     }
   }, [triggerDraftRecoverSignal]);
 
@@ -336,7 +326,7 @@ export default function ViewCreatePost({
       if (data.success) {
         deleteDraft(draft.id);
         setSuccessMessage("Draft posted successfully!");
-        setTimeout(() => { setSuccessMessage(""); onPostSaved(); }, 1500);
+        setTimeout(() => { setSuccessMessage(""); loadPosts(); navigate("/dashboard/posts"); }, 1500);
       } else {
         throw new Error(data.error);
       }
@@ -392,10 +382,10 @@ export default function ViewCreatePost({
         localStorage.removeItem("zyng_nepa_draft");
         setNepaDraftActive(false);
 
-        // Notify parent controller
         setTimeout(() => {
           setSuccessMessage("");
-          onPostSaved();
+          loadPosts();
+          navigate("/dashboard/posts");
         }, 1500);
       } else {
         throw new Error(data.error);

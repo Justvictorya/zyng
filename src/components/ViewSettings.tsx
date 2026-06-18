@@ -12,16 +12,11 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react";
-import { UserProfile, DialectType } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface ViewSettingsProps {
-  dialect: DialectType;
-  user: UserProfile | null;
-  onUserUpdate: (updated: Partial<UserProfile>) => void;
-}
-
-export default function ViewSettings({ dialect, user, onUserUpdate }: ViewSettingsProps) {
+export default function ViewSettings() {
+  const { dialect, currentUser: user, handleUserUpdate: onUserUpdate } = useZyng();
   const t = translations[dialect];
 
   // Subscription plan states

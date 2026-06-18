@@ -46,7 +46,7 @@ async function generateWithFallback(systemPrompt: string, userPrompt: string, fa
 router.post("/generate-caption", async (req: Request, res: Response) => {
   const parsed = aiGenerateSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
+    return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   const { prompt, platforms, tone } = parsed.data;
@@ -82,7 +82,7 @@ Return ONLY valid JSON:
 router.post("/fix-content", async (req: Request, res: Response) => {
   const parsed = aiFixSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
+    return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   const { text } = parsed.data;
@@ -105,7 +105,7 @@ Return ONLY valid JSON:
 router.post("/vibe-switcher", async (req: Request, res: Response) => {
   const parsed = aiVibeSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
+    return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   const { text, targetVibe } = parsed.data;
@@ -138,7 +138,7 @@ Return ONLY valid JSON:
 router.post("/flag-scanner", async (req: Request, res: Response) => {
   const parsed = aiFixSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
+    return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   const { text } = parsed.data;
@@ -162,7 +162,7 @@ Return ONLY valid JSON:
 router.post("/viral-blueprint", async (req: Request, res: Response) => {
   const parsed = aiViralSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.errors[0].message });
+    return res.status(400).json({ error: parsed.error.issues[0].message });
   }
 
   const { url } = parsed.data;

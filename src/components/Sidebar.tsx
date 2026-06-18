@@ -1,4 +1,5 @@
 import React from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   Twitter, 
   Layers, 
@@ -9,34 +10,15 @@ import {
   LogOut, 
   Zap, 
   Globe2,
-  Sun,
-  Moon
 } from "lucide-react";
 import { motion } from "motion/react";
-import { UserProfile, DialectType } from "../types";
+import { DialectType } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface SidebarProps {
-  currentView: string;
-  setCurrentView: (view: string) => void;
-  dialect: DialectType;
-  setDialect: (dialect: DialectType) => void;
-  user: UserProfile | null;
-  onLogout: () => void;
-  theme: "dark" | "light";
-  onToggleTheme: () => void;
-}
-
-export default function Sidebar({ 
-  currentView, 
-  setCurrentView, 
-  dialect, 
-  setDialect, 
-  user, 
-  onLogout,
-  theme,
-  onToggleTheme
-}: SidebarProps) {
+export default function Sidebar() {
+  const { dialect, setDialect, currentUser: user, handleLogout } = useZyng();
+  const navigate = useNavigate();
   const t = translations[dialect];
 
   const menuItems = [
@@ -75,65 +57,57 @@ export default function Sidebar({
         </span>
         
         {menuItems.map((item) => {
-          const isActive = currentView === item.id;
           const Icon = item.icon;
+          const to = item.id === "dashboard" ? "/dashboard" : `/dashboard/${item.id}`;
           
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => setCurrentView(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative duration-200 ${
-                isActive 
-                  ? "bg-purple-600/25 text-purple-200 border border-purple-500/30 shadow-md shadow-purple-900/10" 
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent"
-              }`}
+              to={to}
+              end={item.id === "dashboard"}
+              className={({ isActive }) =>
+                `w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative duration-200 ${
+                  isActive 
+                    ? "bg-purple-600/25 text-purple-200 border border-purple-500/30 shadow-md shadow-purple-900/10" 
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent"
+                }`
+              }
               id={`nav-item-${item.id}`}
             >
-              <div className="flex items-center gap-2.5">
-                {isActive ? (
-                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 animate-pulse" />
-                ) : (
-                  <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
-                )}
-                <Icon className={`h-4 w-4 transition-colors ${isActive ? "text-purple-300" : "text-slate-400 group-hover:text-purple-300"}`} />
-                <span>{item.label}</span>
-              </div>
-              
-              {isActive && (
-                <motion.div 
-                  layoutId="activeIndicator"
-                  className="absolute left-0 w-1 h-5 bg-gradient-to-b from-purple-500 to-indigo-500 rounded-r-full"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
+              {({ isActive }) => (
+                <>
+                  <div className="flex items-center gap-2.5">
+                    {isActive ? (
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0 animate-pulse" />
+                    ) : (
+                      <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
+                    )}
+                    <Icon className={`h-4 w-4 transition-colors ${isActive ? "text-purple-300" : "text-slate-400 group-hover:text-purple-300"}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  
+                  {isActive && (
+                    <motion.div 
+                      layoutId="activeIndicator"
+                      className="absolute left-0 w-1 h-5 bg-gradient-to-b from-purple-500 to-indigo-500 rounded-r-full"
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
 
-              {item.badge && (
-                <span className="px-1.5 py-0.5 text-[9px] bg-purple-500/15 text-purple-300 border border-purple-550/20 rounded font-bold font-mono tracking-tight shadow-md">
-                  {item.badge}
-                </span>
+                  {item.badge && (
+                    <span className="px-1.5 py-0.5 text-[9px] bg-purple-500/15 text-purple-300 border border-purple-550/20 rounded font-bold font-mono tracking-tight shadow-md">
+                      {item.badge}
+                    </span>
+                  )}
+                </>
               )}
-            </button>
+            </NavLink>
           );
         })}
       </div>
 
       {/* Dialect Selector & User Card at Bottom */}
       <div className="p-4 border-t border-white/10 space-y-4">
-        {/* Light/Dark Mode Toggle */}
-        <div className="bg-white/5 rounded-xl p-2.5 border border-white/10 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            {theme === "dark" ? <Moon className="h-3.5 w-3.5 text-purple-400" /> : <Sun className="h-3.5 w-3.5 text-yellow-400" />}
-            <span className="text-[11px] text-slate-400 font-sans">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
-          </div>
-          <button
-            onClick={onToggleTheme}
-            className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none ${theme === "dark" ? "bg-purple-600" : "bg-yellow-400"}`}
-            id="theme-toggle-btn"
-          >
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${theme === "light" ? "translate-x-4" : "translate-x-0"}`} />
-          </button>
-        </div>
-
         {/* Dialect Fast Selector */}
         <div className="bg-white/5 rounded-xl p-2.5 border border-white/10 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -176,7 +150,7 @@ export default function Sidebar({
             </div>
             
             <button 
-              onClick={onLogout}
+              onClick={() => { handleLogout(); navigate("/login"); }}
               className="text-slate-400 hover:text-red-400 hover:bg-white/10 p-1.5 rounded-lg transition-colors border border-transparent hover:border-white/10"
               title="Logout"
               id="logout-btn"

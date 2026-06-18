@@ -33,7 +33,7 @@ router.post("/", async (req: Request, res: Response) => {
 
   const parsed = createPostSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
+    return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
   const { caption, platforms, schedule_time } = parsed.data;
@@ -65,7 +65,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
   const parsed = updatePostSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
+    return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
   const { id } = req.params;

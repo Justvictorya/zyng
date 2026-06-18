@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   TrendingUp, 
   Users, 
@@ -12,24 +13,13 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
-import { Post, UserProfile, DialectType } from "../types";
+import { Post } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface ViewDashboardProps {
-  user: UserProfile | null;
-  dialect: DialectType;
-  posts: Post[];
-  onCreatePostClick?: () => void;
-  onViewPostsClick?: () => void;
-}
-
-export default function ViewDashboard({ 
-  user, 
-  dialect, 
-  posts, 
-  onCreatePostClick,
-  onViewPostsClick 
-}: ViewDashboardProps) {
+export default function ViewDashboard() {
+  const { currentUser: user, dialect, posts } = useZyng();
+  const navigate = useNavigate();
   const t = translations[dialect];
   
   const totalReachNum = "128,450";
@@ -86,7 +76,7 @@ export default function ViewDashboard({
 
           <div className="flex items-center gap-4 shrink-0">
             <button 
-              onClick={onCreatePostClick}
+              onClick={() => navigate("/dashboard/create-post")}
               className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-500 hover:to-indigo-400 text-white font-semibold px-5 py-3 rounded-xl shadow-lg shadow-purple-550/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm cursor-pointer"
             >
               <PlusCircle className="h-4.5 w-4.5" />
@@ -254,7 +244,7 @@ export default function ViewDashboard({
             <p className="text-[11px] text-slate-400 mt-0.5">Posts saved or waiting to broadcast to channels</p>
           </div>
           <button 
-            onClick={onViewPostsClick}
+            onClick={() => navigate("/dashboard/posts")}
             className="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition-colors border border-transparent hover:border-slate-800 px-3 py-1.5 rounded-xl"
             id="view-posts-shortcut"
           >
@@ -268,7 +258,7 @@ export default function ViewDashboard({
             <Calendar className="h-8 w-8 text-slate-600 mx-auto mb-2" />
             <p className="text-xs text-slate-400">No scheduled posts yet.</p>
             <button 
-              onClick={onCreatePostClick}
+              onClick={() => navigate("/dashboard/create-post")}
               className="text-xs text-indigo-400 hover:underline font-medium mt-1 inline-block"
             >
               Draft your first post now

@@ -16,26 +16,12 @@ import {
   Linkedin,
   Loader2
 } from "lucide-react";
-import { Post, DialectType } from "../types";
+import { Post } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
-interface ViewPostsHistoryProps {
-  dialect: DialectType;
-  posts: Post[];
-  isLoading: boolean;
-  onPostDeleted: (id: string) => void;
-  onPostUpdated: (id: string, updatedFields: Partial<Post>) => void;
-  triggerRefresh: () => void;
-}
-
-export default function ViewPostsHistory({ 
-  dialect, 
-  posts, 
-  isLoading,
-  onPostDeleted,
-  onPostUpdated,
-  triggerRefresh
-}: ViewPostsHistoryProps) {
+export default function ViewPostsHistory() {
+  const { dialect, posts, isPostsLoading: isLoading, handlePostDeleted: onPostDeleted, handlePostUpdated: onPostUpdated, loadPosts: triggerRefresh } = useZyng();
   const t = translations[dialect];
 
   // Inline editing states

@@ -1,22 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Clock, ShieldAlert, Zap, Layers, PenSquare, History, BarChart2, Settings, HelpCircle } from "lucide-react";
-import { DialectType } from "../types";
 import { translations } from "../lib/translations";
+import { useZyng } from "../context/ZyngContext";
 
 interface HeaderProps {
-  currentView: string;
-  dialect: DialectType;
   nepaDraftActive: boolean;
   onRecoverDraft?: () => void;
 }
 
-export default function Header({ 
-  currentView, 
-  dialect, 
-  nepaDraftActive,
-  onRecoverDraft 
-}: HeaderProps) {
+export default function Header({ nepaDraftActive, onRecoverDraft }: HeaderProps) {
+  const { dialect } = useZyng();
+  const location = useLocation();
   const t = translations[dialect];
+  const currentView = location.pathname.replace("/dashboard/", "").replace("/dashboard", "dashboard") || "dashboard";
   const [watTime, setWatTime] = useState("");
 
   // WAT (West Africa Time) is UTC+1. Let's compute a neat active clock helper.

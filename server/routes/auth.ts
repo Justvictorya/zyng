@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase, adminAuth } from "../lib/supabase";
 import { signupSchema, loginSchema } from "../middleware/validate";
+import { env } from "../config/env";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -17,7 +18,7 @@ const authLimiter = rateLimit({
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
+    return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
   const { name, email, password } = parsed.data;
@@ -55,7 +56,7 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
 router.post("/login", authLimiter, async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ success: false, error: parsed.error.errors[0].message });
+    return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
   const { email, password } = parsed.data;
@@ -105,6 +106,16 @@ router.post("/reset-password", async (req: Request, res: Response) => {
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
+});
+
+router.get("/debug", (_req: Request, res: Response) => {
+  const supaUrl = env("SUPABASE_URL");
+  const anonKey = env("SUPABASE_ANON_KEY");
+  res.json({
+    supabase_url: supaUrl,
+    anon_key_prefix: anonKey?.slice(0, 20) + "...",
+    anon_key_length: anonKey?.length || 0,
+  });
 });
 
 export default router;
