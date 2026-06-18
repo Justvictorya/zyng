@@ -14,12 +14,14 @@ export const loginSchema = z.object({
 export const createPostSchema = z.object({
   caption: z.string().min(1, "Caption is required").max(5000),
   platforms: z.union([z.string(), z.array(z.string())]),
+  media_urls: z.union([z.string(), z.array(z.string())]).optional(),
   schedule_time: z.string().optional(),
 });
 
 export const updatePostSchema = z.object({
   caption: z.string().min(1).max(5000).optional(),
   platforms: z.union([z.string(), z.array(z.string())]).optional(),
+  media_urls: z.union([z.string(), z.array(z.string())]).optional(),
   schedule_time: z.string().optional(),
 });
 

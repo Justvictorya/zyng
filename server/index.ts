@@ -24,17 +24,21 @@ import postsRoutes from "./routes/posts";
 import aiRoutes from "./routes/ai";
 import oauthRoutes from "./routes/oauth";
 
+import uploadRoutes from "./routes/upload";
+
 // v1 API — full JWT auth on posts
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/posts", requireAuth, postsRoutes);
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1/oauth", oauthRoutes);
+app.use("/api/v1/upload", requireAuth, uploadRoutes);
 
 // Legacy API — backward compatible (user_id in query param)
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/oauth", oauthRoutes);
+app.use("/api/upload", uploadRoutes);
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

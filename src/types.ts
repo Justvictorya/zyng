@@ -13,7 +13,8 @@ export interface Post {
   created_at: string;
   user_id: string;
   caption: string;
-  platforms: string; // Comma-separated or clean list
+  platforms: string;
+  media_urls: string;
   schedule_time: string;
   status: "scheduled" | "published" | "draft";
 }

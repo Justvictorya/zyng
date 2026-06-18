@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Sparkles, 
   HelpCircle, 
@@ -26,7 +26,11 @@ import {
   Share2,
   Music2,
   ThumbsUp,
-  Eye
+  Eye,
+  ImageUp,
+  X,
+  Film,
+  FileImage
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Post, AIResponse, AIFixerResponse, AIFlagResponse, AIViralResponse } from "../types";
@@ -78,6 +82,31 @@ export default function ViewCreatePost() {
     try { return JSON.parse(localStorage.getItem("zyng_drafts") || "[]"); } catch { return []; }
   });
   const [showDrafts, setShowDrafts] = useState(false);
+
+  // Media upload states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const newFiles = [...selectedFiles, ...files].slice(0, 10);
+    setSelectedFiles(newFiles);
+    const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
+    setMediaPreviews((prev) => {
+      prev.forEach((url) => URL.revokeObjectURL(url));
+      return newPreviews;
+    });
+  };
+
+  const removeFile = (index: number) => {
+    URL.revokeObjectURL(mediaPreviews[index]);
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setMediaPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // 1. NEPA-Proof automatic draft hold: Listen to key entries and auto-save
   useEffect(() => {
@@ -338,6 +367,22 @@ export default function ViewCreatePost() {
     }
   };
 
+  // Upload files and return URLs
+  const uploadFiles = async (): Promise<string[]> => {
+    if (selectedFiles.length === 0) return mediaUrls;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach((f) => formData.append("files", f));
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      return data.urls;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Main Submit handler (Schedules the post in back-end db)
   const handleSavePost = async () => {
     if (!caption.trim()) {
@@ -356,12 +401,15 @@ export default function ViewCreatePost() {
     setSuccessMessage("");
 
     try {
+      const urls = await uploadFiles();
+
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           caption,
           platforms: selectedPlatforms,
+          media_urls: urls,
           schedule_time: scheduleTime || new Date(Date.now() + 3600000).toISOString()
         })
       });
@@ -369,16 +417,16 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         setSuccessMessage(t.postSaved);
-        // Clean out form
         setCaption("");
-        // Retain platforms, reset schedule time
+        setSelectedFiles([]);
+        setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+        setMediaUrls([]);
         const now = new Date();
         now.setHours(now.getHours() + 2);
         const offset = now.getTimezoneOffset() * 60000;
         const localISOTime = new Date(now.getTime() - offset).toISOString().substring(0, 16);
         setScheduleTime(localISOTime);
         
-        // Wipe localstorage cache since successfully saved!
         localStorage.removeItem("zyng_nepa_draft");
         setNepaDraftActive(false);
 
@@ -459,6 +507,51 @@ export default function ViewCreatePost() {
                 {caption.length} / 2200
               </span>
             </div>
+          </div>
+
+          {/* Media Upload */}
+          <div className="space-y-2.5">
+            <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+              Images & Videos
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-800 hover:border-purple-500/40 rounded-xl p-6 text-center cursor-pointer transition-colors"
+            >
+              <ImageUp className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+              <p className="text-xs text-slate-500">Tap to upload images or videos</p>
+              <p className="text-[10px] text-slate-600 mt-1">Max 10 files, 50MB each</p>
+            </div>
+            {mediaPreviews.length > 0 && (
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                {mediaPreviews.map((preview, i) => (
+                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-800">
+                    {selectedFiles[i]?.type.startsWith("video/") ? (
+                      <video src={preview} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={preview} alt="" className="w-full h-full object-cover" />
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                    {selectedFiles[i]?.type.startsWith("video/") && (
+                      <Film className="absolute bottom-1 left-1 h-3 w-3 text-white/70" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Platform selection cards (light up with direct brand colors) */}
@@ -594,6 +687,9 @@ export default function ViewCreatePost() {
           <button 
             onClick={() => {
               setCaption("");
+              setSelectedFiles([]);
+              setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+              setMediaUrls([]);
               localStorage.removeItem("zyng_nepa_draft");
               setNepaDraftActive(false);
             }}

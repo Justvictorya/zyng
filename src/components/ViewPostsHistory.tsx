@@ -220,6 +220,25 @@ export default function ViewPostsHistory() {
                       {post.caption}
                     </p>
                   )}
+
+                  {post.media_urls && (() => {
+                    let urls: string[] = [];
+                    try { urls = JSON.parse(post.media_urls); } catch {}
+                    if (urls.length === 0) return null;
+                    return (
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        {urls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                            {url.match(/\.(mp4|mov|avi)$/i) ? (
+                              <video src={url} className="h-16 w-16 rounded-lg object-cover border border-slate-800" />
+                            ) : (
+                              <img src={url} alt="" className="h-16 w-16 rounded-lg object-cover border border-slate-800" />
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Post Footer Metadata & Primary Actions */}

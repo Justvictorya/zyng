@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../lib/supabase";
 import { createPostSchema, updatePostSchema } from "../middleware/validate";
+import { savePostMedia, getPostMedia, getAllMedia, deletePostMedia } from "../lib/storage";
 
 const router = Router();
 
@@ -21,7 +22,17 @@ router.get("/", async (req: Request, res: Response) => {
       .order("created_at", { ascending: false });
 
     if (error) return res.status(500).json({ success: false, error: error.message });
-    return res.json({ success: true, posts: data || [] });
+
+    const posts = data || [];
+    const ids = posts.map((p: any) => p.id);
+    const mediaMap = getAllMedia(ids);
+
+    const enriched = posts.map((p: any) => ({
+      ...p,
+      media_urls: JSON.stringify(mediaMap[p.id] || []),
+    }));
+
+    return res.json({ success: true, posts: enriched });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -36,7 +47,7 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
-  const { caption, platforms, schedule_time } = parsed.data;
+  const { caption, platforms, media_urls, schedule_time } = parsed.data;
 
   try {
     const { data, error } = await supabase
@@ -53,7 +64,21 @@ router.post("/", async (req: Request, res: Response) => {
       .single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
-    return res.json({ success: true, post: data });
+
+    const urls = media_urls
+      ? Array.isArray(media_urls)
+        ? media_urls
+        : media_urls.split(",").filter(Boolean)
+      : [];
+
+    if (urls.length > 0) {
+      await savePostMedia(data.id, urls);
+    }
+
+    return res.json({
+      success: true,
+      post: { ...data, media_urls: JSON.stringify(urls) },
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -89,7 +114,19 @@ router.put("/:id", async (req: Request, res: Response) => {
       .single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
-    return res.json({ success: true, post: data });
+
+    if (parsed.data.media_urls !== undefined) {
+      const urls = Array.isArray(parsed.data.media_urls)
+        ? parsed.data.media_urls
+        : parsed.data.media_urls.split(",").filter(Boolean);
+      await savePostMedia(id, urls);
+    }
+
+    const existingMedia = getPostMedia(id);
+    return res.json({
+      success: true,
+      post: { ...data, media_urls: JSON.stringify(existingMedia) },
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -104,6 +141,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { error } = await supabase.from("posts").delete().eq("id", id).eq("user_id", userId);
     if (error) return res.status(500).json({ success: false, error: error.message });
+    deletePostMedia(id);
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
