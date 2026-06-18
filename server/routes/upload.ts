@@ -6,13 +6,16 @@ import { uploadFile } from "../lib/storage";
 
 const router = Router();
 
+const FIFTY_MB = 50 * 1024 * 1024;
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: FIFTY_MB },
   fileFilter: (_req, file, cb) => {
     const allowed = [
       "image/jpeg", "image/png", "image/gif", "image/webp",
       "video/mp4", "video/quicktime", "video/x-msvideo",
+      "video/x-matroska", "video/webm", "video/mpeg",
     ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
@@ -22,7 +25,7 @@ const upload = multer({
   },
 });
 
-router.post("/", upload.array("files", 10), async (req: Request, res: Response) => {
+router.post("/", upload.array("files", 20), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {

@@ -528,7 +528,7 @@ export default function ViewCreatePost() {
             >
               <ImageUp className="h-8 w-8 text-slate-500 mx-auto mb-2" />
               <p className="text-xs text-slate-500">Tap to upload images or videos</p>
-              <p className="text-[10px] text-slate-600 mt-1">Max 10 files, 50MB each</p>
+              <p className="text-[10px] text-slate-600 mt-1">Max 20 files, 50MB each (Supabase limit)</p>
             </div>
             {mediaPreviews.length > 0 && (
               <div className="grid grid-cols-5 gap-2 mt-2">
