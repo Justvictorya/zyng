@@ -118,4 +118,15 @@ router.get("/debug", (_req: Request, res: Response) => {
   });
 });
 
+router.post("/debug-login", async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  res.json({
+    body_received: { email, password: password ? "***" : undefined },
+    error: error ? { message: error.message, status: error.status } : null,
+    has_user: !!data?.user,
+    has_session: !!data?.session,
+  });
+});
+
 export default router;
