@@ -25,6 +25,12 @@ const upload = multer({
   },
 });
 
+// Permissive multer for chunk uploads (client already validates types)
+const chunkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: FIFTY_MB },
+});
+
 function getChunkDir(fileId: string) {
   const dir = path.join("/tmp", "uploads", fileId);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -55,7 +61,7 @@ router.post("/", upload.array("files", 20), async (req: Request, res: Response) 
 });
 
 // Upload a single chunk
-router.post("/chunk", upload.single("file"), async (req: Request, res: Response) => {
+router.post("/chunk", chunkUpload.single("file"), async (req: Request, res: Response) => {
   try {
     const file = req.file as Express.Multer.File | undefined;
     if (!file) return res.status(400).json({ success: false, error: "No chunk file provided" });
