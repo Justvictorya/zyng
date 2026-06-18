@@ -22,7 +22,14 @@ interface ZyngContextValue {
 const ZyngContext = createContext<ZyngContextValue | null>(null);
 
 export function ZyngProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem("zyng_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [dialect, setDialect] = useState<DialectType>("english");
   const [posts, setPosts] = useState<Post[]>([]);
   const [isPostsLoading, setIsPostsLoading] = useState(false);
@@ -37,17 +44,6 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
         if (parsed.caption && parsed.caption.trim().length > 3) {
           setNepaDraftActive(true);
         }
-      } catch {}
-    }
-  }, []);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("zyng_user");
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        setCurrentUser(u);
-        loadPosts();
       } catch {}
     }
   }, []);
