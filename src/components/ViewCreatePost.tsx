@@ -367,17 +367,63 @@ export default function ViewCreatePost() {
     }
   };
 
-  // Upload files and return URLs
+  // Upload a single file (chunked if > 50MB)
+  const uploadSingleFile = async (file: File): Promise<string> => {
+    // Files under 50MB use simple upload
+    if (file.size <= 50 * 1024 * 1024) {
+      const formData = new FormData();
+      formData.append("files", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      return data.urls[0];
+    }
+
+    // Large files use chunked upload
+    const CHUNK_SIZE = 50 * 1024 * 1024;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append("file", chunk);
+      formData.append("fileId", fileId);
+      formData.append("chunkIndex", String(i));
+      formData.append("totalChunks", String(totalChunks));
+      formData.append("originalName", file.name);
+      formData.append("mimeType", file.type);
+
+      const res = await fetch("/api/upload/chunk", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(`Chunk ${i} failed: ${data.error}`);
+    }
+
+    // Complete the upload
+    const completeRes = await fetch("/api/upload/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileId, originalName: file.name, mimeType: file.type }),
+    });
+    const completeData = await completeRes.json();
+    if (!completeData.success) throw new Error(completeData.error);
+    return completeData.url;
+  };
+
+  // Upload all files and return URLs
   const uploadFiles = async (): Promise<string[]> => {
     if (selectedFiles.length === 0) return mediaUrls;
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      selectedFiles.forEach((f) => formData.append("files", f));
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      return data.urls;
+      const urls: string[] = [];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const url = await uploadSingleFile(selectedFiles[i]);
+        urls.push(url);
+      }
+      return urls;
     } finally {
       setIsUploading(false);
     }
@@ -528,7 +574,7 @@ export default function ViewCreatePost() {
             >
               <ImageUp className="h-8 w-8 text-slate-500 mx-auto mb-2" />
               <p className="text-xs text-slate-500">Tap to upload images or videos</p>
-              <p className="text-[10px] text-slate-600 mt-1">Max 20 files, 50MB each (Supabase limit)</p>
+              <p className="text-[10px] text-slate-600 mt-1">Max 20 files, files over 50MB auto-chunked</p>
             </div>
             {mediaPreviews.length > 0 && (
               <div className="grid grid-cols-5 gap-2 mt-2">
@@ -718,7 +764,12 @@ export default function ViewCreatePost() {
             className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-900/30 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             id="schedule-submit-btn"
           >
-            {isSaving ? (
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Uploading media files...</span>
+              </>
+            ) : isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Scheduling Post on Central Queue...</span>
