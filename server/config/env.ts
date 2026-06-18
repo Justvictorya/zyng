@@ -45,7 +45,7 @@ function validateEnv() {
 }
 
 function env(key: string, fallback?: string): string {
-  return process.env[key] || fallback || "";
+  return (process.env[key] || fallback || "").trim();
 }
 
 export { validateEnv, env, REQUIRED_VARS, OAUTH_VARS };

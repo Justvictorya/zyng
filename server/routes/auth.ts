@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { supabase, adminAuth } from "../lib/supabase";
 import { signupSchema, loginSchema } from "../middleware/validate";
-import { env } from "../config/env";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -106,27 +105,6 @@ router.post("/reset-password", async (req: Request, res: Response) => {
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
-});
-
-router.get("/debug", (_req: Request, res: Response) => {
-  const supaUrl = env("SUPABASE_URL");
-  const anonKey = env("SUPABASE_ANON_KEY");
-  res.json({
-    supabase_url: supaUrl,
-    anon_key_full: anonKey,
-    anon_key_length: anonKey?.length || 0,
-  });
-});
-
-router.post("/debug-login", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  res.json({
-    body_received: { email, password: password ? "***" : undefined },
-    error: error ? { message: error.message, status: error.status } : null,
-    has_user: !!data?.user,
-    has_session: !!data?.session,
-  });
 });
 
 export default router;
