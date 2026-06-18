@@ -113,7 +113,7 @@ router.get("/debug", (_req: Request, res: Response) => {
   const anonKey = env("SUPABASE_ANON_KEY");
   res.json({
     supabase_url: supaUrl,
-    anon_key_prefix: anonKey?.slice(0, 20) + "...",
+    anon_key_full: anonKey,
     anon_key_length: anonKey?.length || 0,
   });
 });
