@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase-client";
 import { useZyng } from "../context/ZyngContext";
 import { Loader2 } from "lucide-react";
@@ -8,41 +8,88 @@ export default function AuthCallback() {
   const { setCurrentUser } = useZyng();
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        setError("No session found. Please try logging in again.");
-        return;
-      }
+    const provider = searchParams.get("provider");
 
-      const { user } = session;
-
-      try {
-        // Check if user exists in our system, if not create one
-        const res = await fetch("/api/auth/oauth-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email,
-            name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-            avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || "",
-          }),
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          setCurrentUser(data.user);
-          localStorage.setItem("zyng_user", JSON.stringify(data.user));
-          navigate("/dashboard", { replace: true });
-        } else {
-          setError(data.error || "Failed to create session");
-        }
-      } catch {
-        setError("Failed to connect to authentication server.");
-      }
-    });
+    if (provider === "tiktok") {
+      handleTikTokLogin();
+    } else {
+      handleSupabaseCallback();
+    }
   }, []);
+
+  async function handleTikTokLogin() {
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
+    const savedState = localStorage.getItem("tiktok_login_state");
+
+    if (!code) {
+      setError("No authorization code received from TikTok.");
+      return;
+    }
+
+    if (state && savedState && state !== savedState) {
+      setError("State mismatch. Possible CSRF attack.");
+      return;
+    }
+
+    localStorage.removeItem("tiktok_login_state");
+
+    try {
+      const res = await fetch("/api/auth/tiktok-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCurrentUser(data.user);
+        localStorage.setItem("zyng_user", JSON.stringify(data.user));
+        navigate("/dashboard", { replace: true });
+      } else {
+        setError(data.error || "TikTok login failed");
+      }
+    } catch {
+      setError("Failed to connect to authentication server.");
+    }
+  }
+
+  async function handleSupabaseCallback() {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      setError("No session found. Please try logging in again.");
+      return;
+    }
+
+    const { user } = session;
+
+    try {
+      const res = await fetch("/api/auth/oauth-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+          avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture || "",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCurrentUser(data.user);
+        localStorage.setItem("zyng_user", JSON.stringify(data.user));
+        navigate("/dashboard", { replace: true });
+      } else {
+        setError(data.error || "Failed to create session");
+      }
+    } catch {
+      setError("Failed to connect to authentication server.");
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050507]">

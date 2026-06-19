@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { supabase, adminAuth } from "../lib/supabase";
 import { signupSchema, loginSchema } from "../middleware/validate";
+import { env } from "../config/env";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -129,6 +130,87 @@ router.post("/oauth-login", async (req: Request, res: Response) => {
     }
 
     // Create new user via admin API
+    const { data, error } = await adminAuth.createUser({
+      email,
+      password: crypto.randomUUID(),
+      user_metadata: { full_name: name },
+      email_confirm: true,
+    });
+
+    if (error) return res.status(400).json({ success: false, error: error.message });
+
+    const user = {
+      id: data.user!.id,
+      name: data.user!.user_metadata?.full_name || name,
+      email: data.user!.email,
+      tier: "Free",
+      joined: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
+      avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+    };
+
+    return res.json({ success: true, user });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post("/tiktok-login", async (req: Request, res: Response) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, error: "Code required" });
+
+  const clientKey = env("TIKTOK_CLIENT_ID");
+  const clientSecret = env("TIKTOK_CLIENT_SECRET");
+  if (!clientKey || !clientSecret) {
+    return res.status(500).json({ success: false, error: "TikTok OAuth not configured" });
+  }
+
+  try {
+    const tokenRes = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_key: clientKey,
+        client_secret: clientSecret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: `${req.protocol}://${req.get("host")}/auth/callback?provider=tiktok`,
+      }),
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) {
+      return res.status(400).json({ success: false, error: tokenData.error || "Failed to get access token" });
+    }
+
+    const profileRes = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url",
+      { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
+    );
+    const profileData = await profileRes.json();
+    const tikTokUser = profileData.data?.user;
+    if (!tikTokUser) {
+      return res.status(400).json({ success: false, error: "Failed to get TikTok user info" });
+    }
+
+    const email = `tiktok_${tikTokUser.open_id}@zyng.app`;
+    const name = tikTokUser.display_name || "TikTok User";
+    const avatar = tikTokUser.avatar_url || "";
+
+    const { data: users } = await adminAuth.listUsers();
+    const existing = users.users.find((u: any) => u.email === email);
+
+    if (existing) {
+      const user = {
+        id: existing.id,
+        name: existing.user_metadata?.full_name || name,
+        email: existing.email,
+        tier: "Pro",
+        joined: new Date(existing.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
+        avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+      };
+      return res.json({ success: true, user });
+    }
+
     const { data, error } = await adminAuth.createUser({
       email,
       password: crypto.randomUUID(),
