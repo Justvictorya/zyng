@@ -43,6 +43,8 @@ app.use("/api/oauth", oauthRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
+import { startScheduler } from "./lib/scheduler";
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting Zyng in development mode...");
@@ -60,6 +62,7 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Zyng server running on port ${PORT}`);
+    startScheduler();
   });
 }
 

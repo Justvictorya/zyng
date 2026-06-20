@@ -1,6 +1,9 @@
 import { supabase } from "./supabase";
 import { env } from "../config/env";
 
+const FACEBOOK_CLIENT_ID = env("FACEBOOK_CLIENT_ID");
+const FACEBOOK_CLIENT_SECRET = env("FACEBOOK_CLIENT_SECRET");
+
 interface PublishResult {
   platform: string;
   success: boolean;
@@ -40,10 +43,14 @@ export async function publishPost(
     }
   }
 
-  await supabase
-    .from("posts")
-    .update({ publish_results: JSON.stringify(results) })
-    .eq("id", postId);
+  try {
+    await supabase
+      .from("posts")
+      .update({ publish_results: JSON.stringify(results) })
+      .eq("id", postId);
+  } catch {
+    // Column may not exist yet — safe to ignore
+  }
 
   return results;
 }
@@ -72,16 +79,45 @@ async function publishToPlatform(
   }
 }
 
+async function refreshFacebookToken(account: any): Promise<string | null> {
+  if (!FACEBOOK_CLIENT_ID || !FACEBOOK_CLIENT_SECRET) return null;
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v22.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${FACEBOOK_CLIENT_ID}&client_secret=${FACEBOOK_CLIENT_SECRET}&fb_exchange_token=${account.access_token}`
+    );
+    const data = await res.json();
+    if (data.access_token) {
+      await supabase
+        .from("connected_accounts")
+        .update({ access_token: data.access_token })
+        .eq("id", account.id);
+      return data.access_token;
+    }
+  } catch {}
+  return null;
+}
+
 async function publishToFacebook(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
-  const res = await fetch(`https://graph.facebook.com/v22.0/${account.platform_user_id}/feed`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: caption,
-      access_token: account.access_token,
-    }),
-  });
-  const data = await res.json();
+  let token = account.access_token;
+
+  const postToFb = async (t: string) => {
+    const r = await fetch(`https://graph.facebook.com/v22.0/${account.platform_user_id}/feed`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: caption, access_token: t }),
+    });
+    return r.json();
+  };
+
+  let data = await postToFb(token);
+  if (data.error?.code === 190 || data.error?.error_subcode === 463) {
+    const refreshed = await refreshFacebookToken(account);
+    if (refreshed) {
+      token = refreshed;
+      data = await postToFb(token);
+    }
+  }
+
   if (data.error) return { platform: "facebook", success: false, error: data.error.message };
   return { platform: "facebook", success: true, postId: data.id };
 }

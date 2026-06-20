@@ -145,4 +145,20 @@ router.get("/accounts", optionalAuth, async (req: Request, res: Response) => {
   return res.json({ success: true, accounts: data || [] });
 });
 
+router.delete("/accounts/:platform", optionalAuth, async (req: Request, res: Response) => {
+  const userId = req.query.user_id as string || req.userId;
+  if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+
+  const { platform } = req.params;
+
+  const { error } = await supabase
+    .from("connected_accounts")
+    .delete()
+    .eq("user_id", userId)
+    .eq("platform", platform);
+
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  return res.json({ success: true });
+});
+
 export default router;

@@ -93,17 +93,15 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 
 router.post("/reset-password", async (req: Request, res: Response) => {
   const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, error: "Email required" });
 
   try {
-    const { data: users } = await adminAuth.listUsers();
-    const user = users.users.find((u: any) => u.email === email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${req.protocol}://${req.get("host")}/login`,
+    });
 
-    if (!user) {
-      return res.status(404).json({ success: false, error: "User not found" });
-    }
-
-    await adminAuth.updateUserById(user.id, { password: "password123" });
-    return res.json({ success: true, message: "Password reset to password123" });
+    if (error) return res.status(400).json({ success: false, error: error.message });
+    return res.json({ success: true, message: "Password reset email sent" });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

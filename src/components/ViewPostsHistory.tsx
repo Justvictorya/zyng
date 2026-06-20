@@ -14,7 +14,8 @@ import {
   Instagram,
   Twitter,
   Linkedin,
-  Loader2
+  Loader2,
+  Send
 } from "lucide-react";
 import { Post } from "../types";
 import { translations } from "../lib/translations";
@@ -64,6 +65,23 @@ export default function ViewPostsHistory() {
       console.error("Failed to update post inline:", e);
     } finally {
       setIsUpdatingId(null);
+    }
+  };
+
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+
+  const handlePublishNow = async (post: Post) => {
+    setPublishingId(post.id);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        triggerRefresh();
+      }
+    } catch (e) {
+      console.error("Failed to publish now:", e);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -261,6 +279,22 @@ export default function ViewPostsHistory() {
 
                   {!isEditing && (
                     <div className="flex gap-2 justify-end shrink-0">
+                      {post.status !== "published" && (
+                        <button
+                          onClick={() => handlePublishNow(post)}
+                          disabled={publishingId === post.id}
+                          className="p-2 border border-emerald-700/40 text-emerald-400 hover:text-emerald-300 hover:border-emerald-600 hover:bg-emerald-500/5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold disabled:opacity-40"
+                          title="Publish this post now to all selected platforms"
+                          id={`publish-now-btn-${post.id}`}
+                        >
+                          {publishingId === post.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                          <span>Publish Now</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => handleStartEdit(post)}
                         className="p-2 border border-slate-850 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-950/20 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold"
@@ -268,7 +302,7 @@ export default function ViewPostsHistory() {
                         id={`edit-btn-${post.id}`}
                       >
                         <Edit3 className="h-3.5 w-3.5" />
-                        <span>Edit Caption</span>
+                        <span>Edit</span>
                       </button>
 
                       <button

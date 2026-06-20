@@ -79,12 +79,24 @@ export default function ViewSettings() {
   };
 
   const handleDisconnect = async (networkId: string) => {
-    // For now just reset locally — real disconnect would call API
-    setLinkedAccounts(prev => {
-      const next = new Set(prev);
-      next.delete(networkId);
-      return next;
-    });
+    const savedUser = localStorage.getItem("zyng_user");
+    if (!savedUser) return;
+    const uid = JSON.parse(savedUser).id;
+    try {
+      const res = await fetch(`/api/auth/accounts/${networkId}?user_id=${uid}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setLinkedAccounts(prev => {
+          const next = new Set(prev);
+          next.delete(networkId);
+          return next;
+        });
+        setToast(`Disconnected from ${networkId}`);
+        setTimeout(() => setToast(null), 3000);
+      }
+    } catch (e) {
+      console.error("Failed to disconnect", e);
+    }
   };
 
   const handlePaystackSandboxTrigger = (e: React.FormEvent) => {

@@ -157,4 +157,46 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/:id/publish", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+
+  const { id } = req.params;
+
+  try {
+    const { data: post } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+
+    if (!post) return res.status(404).json({ success: false, error: "Post not found" });
+
+    const platforms = typeof post.platforms === "string"
+      ? post.platforms.split(",").map((p: string) => p.trim()).filter(Boolean)
+      : post.platforms || [];
+
+    const mediaUrls: string[] = [];
+    try {
+      const parsed = typeof post.media_urls === "string"
+        ? JSON.parse(post.media_urls)
+        : post.media_urls || [];
+      if (Array.isArray(parsed)) mediaUrls.push(...parsed);
+    } catch {}
+
+    const results = await publishPost(
+      post.id,
+      post.user_id,
+      post.caption || "",
+      platforms,
+      mediaUrls
+    );
+
+    return res.json({ success: true, results });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
