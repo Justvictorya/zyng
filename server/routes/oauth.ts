@@ -51,10 +51,10 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   if (!cfg) return res.status(404).send("Unknown platform");
 
   if (oauthError) {
-    return res.redirect(`/?error=${platform} authorization was denied`);
+    return res.redirect(`/settings?error=${platform} authorization was denied`);
   }
 
-  if (!code) return res.redirect("/?error=No authorization code received");
+  if (!code) return res.redirect("/settings?error=No authorization code received");
 
   let parsedState: any = {};
   try {
@@ -126,7 +126,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/?error=Failed to save ${platform} connection`);
     }
 
-    res.redirect(`/?connected=${platform}`);
+    res.redirect(`/settings?connected=${platform}`);
   } catch (err: any) {
     console.error(`[OAuth] Callback error for ${platform}:`, err.message);
     res.redirect("/?error=OAuth connection failed");

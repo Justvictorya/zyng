@@ -29,3 +29,31 @@ BEGIN
     updated_at = now();
 END;
 $$;
+
+-- Get all connected accounts for a user
+CREATE OR REPLACE FUNCTION get_connected_accounts(
+  p_user_id UUID
+) RETURNS TABLE (
+  id BIGINT,
+  user_id UUID,
+  platform TEXT,
+  platform_user_id TEXT,
+  platform_user_name TEXT,
+  access_token TEXT,
+  token_expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+)
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN QUERY
+  SELECT ca.id, ca.user_id, ca.platform, ca.platform_user_id,
+         ca.platform_user_name, ca.access_token, ca.token_expires_at,
+         ca.created_at, ca.updated_at
+  FROM connected_accounts ca
+  WHERE ca.user_id = p_user_id
+  ORDER BY ca.platform;
+END;
+$$;

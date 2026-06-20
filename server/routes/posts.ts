@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { supabase } from "../lib/supabase";
 import { createPostSchema, updatePostSchema } from "../middleware/validate";
 import { savePostMedia, getPostMedia, getAllMedia, deletePostMedia } from "../lib/storage";
+import { publishPost } from "../lib/publisher";
 
 const router = Router();
 
@@ -73,6 +74,14 @@ router.post("/", async (req: Request, res: Response) => {
 
     if (urls.length > 0) {
       await savePostMedia(data.id, urls);
+    }
+
+    const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
+
+    if (platformList.length > 0) {
+      publishPost(data.id, userId, caption, platformList, urls).catch((err) =>
+        console.error(`[Publisher] Post ${data.id} publish error:`, err)
+      );
     }
 
     return res.json({
