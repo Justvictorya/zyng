@@ -44,7 +44,7 @@ export default function ViewCreatePost() {
 
   // Base composer states
   const [caption, setCaption] = useState("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["facebook", "whatsapp"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleTime, setScheduleTime] = useState("");
   const [nepaProofHold, setNepaProofHold] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
@@ -82,6 +82,21 @@ export default function ViewCreatePost() {
     try { return JSON.parse(localStorage.getItem("zyng_drafts") || "[]"); } catch { return []; }
   });
   const [showDrafts, setShowDrafts] = useState(false);
+
+  // Connected accounts state
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("zyng_user");
+    if (!savedUser) return;
+    const uid = JSON.parse(savedUser).id;
+    fetch(`/api/auth/accounts?user_id=${uid}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setConnectedPlatforms(data.accounts.map((a: any) => a.platform));
+      })
+      .catch(() => {});
+  }, []);
 
   // Media upload states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -625,12 +640,19 @@ export default function ViewCreatePost() {
                     <div>
                       <span className="text-[11px] font-semibold block font-sans">{plat.label}</span>
                       <span className="text-[9px] text-slate-500 font-mono block">
-                        {isSelected ? "Active" : "Tap to select"}
+                        {isSelected
+                          ? "Selected"
+                          : connectedPlatforms.includes(plat.id)
+                            ? "Connected"
+                            : "Not connected"}
                       </span>
                     </div>
 
                     {isSelected && (
                       <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-indigo-400 rounded-full"></span>
+                    )}
+                    {connectedPlatforms.includes(plat.id) && !isSelected && (
+                      <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-emerald-400 rounded-full"></span>
                     )}
                   </button>
                 );
