@@ -4,8 +4,8 @@ import { supabase } from "../lib/supabase";
 const router = Router();
 
 router.get("/dashboard", async (req: Request, res: Response) => {
-  const userId = (req.query.user_id as string) || req.userId;
-  if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
   try {
     const { data: posts } = await supabase

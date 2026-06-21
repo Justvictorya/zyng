@@ -38,11 +38,12 @@ export default function ViewSettings() {
   // Fetch connected accounts from API
   useEffect(() => {
     const fetchAccounts = async () => {
-      const savedUser = localStorage.getItem("zyng_user");
-      if (!savedUser) return;
-      const uid = JSON.parse(savedUser).id;
+      const token = localStorage.getItem("zyng_token");
+      if (!token) return;
       try {
-        const res = await fetch(`/api/auth/accounts?user_id=${uid}`);
+        const res = await fetch("/api/auth/accounts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         if (data.success) {
           setLinkedAccounts(new Set(data.accounts.map((a: any) => a.platform)));
@@ -71,19 +72,32 @@ export default function ViewSettings() {
     }
   }, []);
 
-  const handleConnect = (networkId: string) => {
-    const savedUser = localStorage.getItem("zyng_user");
-    if (!savedUser) return;
-    const uid = JSON.parse(savedUser).id;
-    window.location.href = `/api/auth/${networkId}/connect?user_id=${uid}`;
+  const handleConnect = async (networkId: string) => {
+    const token = localStorage.getItem("zyng_token");
+    if (!token) return;
+    setConnectingNetwork(networkId);
+    try {
+      const res = await fetch(`/api/auth/${networkId}/connect`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error("Failed to start OAuth", e);
+      setConnectingNetwork(null);
+    }
   };
 
   const handleDisconnect = async (networkId: string) => {
-    const savedUser = localStorage.getItem("zyng_user");
-    if (!savedUser) return;
-    const uid = JSON.parse(savedUser).id;
+    const token = localStorage.getItem("zyng_token");
+    if (!token) return;
     try {
-      const res = await fetch(`/api/auth/accounts/${networkId}?user_id=${uid}`, { method: "DELETE" });
+      const res = await fetch(`/api/auth/accounts/${networkId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (data.success) {
         setLinkedAccounts(prev => {

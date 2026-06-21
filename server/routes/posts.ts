@@ -7,8 +7,7 @@ import { publishPost } from "../lib/publisher";
 const router = Router();
 
 function getUserId(req: Request): string | null {
-  if (req.userId) return req.userId;
-  return (req.query.user_id as string) || null;
+  return req.userId || null;
 }
 
 router.get("/", async (req: Request, res: Response) => {

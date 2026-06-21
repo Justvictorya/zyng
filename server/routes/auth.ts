@@ -29,7 +29,6 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       email,
       password,
       user_metadata: { full_name: name },
-      email_confirm: true,
     });
 
     if (error) {
@@ -91,7 +90,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
   }
 });
 
-router.post("/reset-password", async (req: Request, res: Response) => {
+router.post("/reset-password", authLimiter, async (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ success: false, error: "Email required" });
 

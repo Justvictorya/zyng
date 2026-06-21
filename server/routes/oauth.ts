@@ -2,14 +2,16 @@ import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { supabase } from "../lib/supabase";
 import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId } from "../config/oauth";
-import { optionalAuth } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 import { env } from "../config/env";
 
 const router = Router();
 
-router.get("/:platform/connect", optionalAuth, async (req: Request, res: Response) => {
+const pendingStates = new Map<string, { userId: string; csrf: string; codeVerifier?: string }>();
+
+router.get("/:platform/connect", requireAuth, async (req: Request, res: Response) => {
   const { platform } = req.params;
-  const userId = req.query.user_id as string || req.userId;
+  const userId = req.userId!;
 
   const cfg = OAUTH_CONFIG[platform];
   if (!cfg) return res.status(404).json({ error: `Unknown platform: ${platform}` });
@@ -27,9 +29,12 @@ router.get("/:platform/connect", optionalAuth, async (req: Request, res: Respons
     codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
   }
 
-  const stateData: any = { userId, platform, csrf: crypto.randomBytes(16).toString("hex") };
-  if (codeVerifier) stateData.codeVerifier = codeVerifier;
+  const stateId = crypto.randomUUID();
+  const csrf = crypto.randomBytes(16).toString("hex");
+  pendingStates.set(stateId, { userId, csrf, codeVerifier });
+  setTimeout(() => pendingStates.delete(stateId), 10 * 60 * 1000);
 
+  const stateData: any = { stateId, csrf };
   const state = JSON.stringify(stateData);
   const redirectUri = oauthRedirectUri(req, platform);
   const clientIdParam = cfg.useClientKey ? "client_key" : "client_id";
@@ -44,7 +49,7 @@ router.get("/:platform/connect", optionalAuth, async (req: Request, res: Respons
     authUrl += `&${cfg.extraAuthorizeParams}`;
   }
 
-  res.redirect(authUrl);
+  res.json({ success: true, url: authUrl });
 });
 
 router.get("/:platform/callback", async (req: Request, res: Response) => {
@@ -63,9 +68,18 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   let parsedState: any = {};
   try {
     parsedState = JSON.parse(decodeURIComponent(state as string));
-  } catch {}
-  const userId = parsedState.userId;
-  if (!userId) return res.redirect("/?error=Missing user session");
+  } catch {
+    return res.redirect("/?error=Invalid OAuth state");
+  }
+
+  const pending = pendingStates.get(parsedState.stateId);
+  if (!pending || pending.csrf !== parsedState.csrf) {
+    return res.redirect("/?error=OAuth session expired or invalid");
+  }
+
+  const userId = pending.userId;
+  const codeVerifier = pending.codeVerifier;
+  pendingStates.delete(parsedState.stateId);
 
   const clientId = getOauthClientId(platform);
   const clientSecret = env(cfg.clientSecretEnv);
@@ -84,8 +98,8 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     delete tokenBody.client_id;
   }
 
-  if (parsedState.codeVerifier) {
-    tokenBody.code_verifier = parsedState.codeVerifier;
+  if (codeVerifier) {
+    tokenBody.code_verifier = codeVerifier;
   }
 
   try {
@@ -137,9 +151,9 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/accounts", optionalAuth, async (req: Request, res: Response) => {
-  const userId = req.query.user_id as string || req.userId;
-  if (!userId) return res.json({ success: true, accounts: [] });
+router.get("/accounts", requireAuth, async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
   const { data, error } = await supabase.rpc("get_connected_accounts", {
     p_user_id: userId,
@@ -149,9 +163,9 @@ router.get("/accounts", optionalAuth, async (req: Request, res: Response) => {
   return res.json({ success: true, accounts: data || [] });
 });
 
-router.delete("/accounts/:platform", optionalAuth, async (req: Request, res: Response) => {
-  const userId = req.query.user_id as string || req.userId;
-  if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+router.delete("/accounts/:platform", requireAuth, async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
   const { platform } = req.params;
 

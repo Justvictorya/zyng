@@ -35,13 +35,13 @@ app.use("/api/v1/oauth", oauthRoutes);
 app.use("/api/v1/upload", requireAuth, uploadRoutes);
 app.use("/api/v1/analytics", requireAuth, analyticsRoutes);
 
-// Legacy API — backward compatible (user_id in query param)
+// Legacy API — backward compatible
 app.use("/api/auth", authRoutes);
-app.use("/api/posts", postsRoutes);
+app.use("/api/posts", requireAuth, postsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/oauth", oauthRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/analytics", analyticsRoutes);
+app.use("/api/upload", requireAuth, uploadRoutes);
+app.use("/api/analytics", requireAuth, analyticsRoutes);
 
 import { startScheduler } from "./lib/scheduler";
 
