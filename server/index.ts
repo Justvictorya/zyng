@@ -31,9 +31,11 @@ app.use((req, res, next) => {
     origin === `http://localhost:${PORT}` ||
     origin === `http://localhost:5173` ||
     process.env.NODE_ENV !== "production";
-  res.setHeader("Access-Control-Allow-Origin", allowed ? origin! : "null");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", allowed ? origin : "null");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
@@ -49,7 +51,7 @@ import uploadRoutes from "./routes/upload";
 // v1 API — full JWT auth on posts
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/posts", requireAuth, postsRoutes);
-app.use("/api/v1/ai", aiRoutes);
+app.use("/api/v1/ai", requireAuth, aiRoutes);
 app.use("/api/v1/oauth", oauthRoutes);
 app.use("/api/v1/upload", requireAuth, uploadRoutes);
 app.use("/api/v1/analytics", requireAuth, analyticsRoutes);
@@ -57,7 +59,7 @@ app.use("/api/v1/analytics", requireAuth, analyticsRoutes);
 // Legacy API — backward compatible
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", requireAuth, postsRoutes);
-app.use("/api/ai", aiRoutes);
+app.use("/api/ai", requireAuth, aiRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/upload", requireAuth, uploadRoutes);
 app.use("/api/analytics", requireAuth, analyticsRoutes);

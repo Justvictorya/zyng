@@ -42,6 +42,11 @@ export default function ViewCreatePost() {
   const navigate = useNavigate();
   const t = translations[dialect];
 
+  const authHeaders = (): Record<string, string> => {
+    const t = localStorage.getItem("zyng_token");
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  };
+
   // Base composer states
   const [caption, setCaption] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -211,7 +216,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/generate-caption", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           prompt: aiPrompt,
           platforms: selectedPlatforms,
@@ -243,7 +248,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/fix-content", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ text: caption })
       });
       const data = await res.json();
@@ -269,7 +274,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/vibe-switcher", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ text: caption, targetVibe })
       });
       const data = await res.json();
@@ -295,7 +300,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/flag-scanner", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ text: caption })
       });
       const data = await res.json();
@@ -317,7 +322,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/viral-blueprint", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ url: viralUrl })
       });
       const data = await res.json();
