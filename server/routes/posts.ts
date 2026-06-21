@@ -245,11 +245,12 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
     recordPublishResults(post.id, results);
 
     // Mark as processed in DB so scheduler won't re-pick it up
-    await serviceDb
-      .from("posts")
-      .update({ schedule_time: "2099-01-01T00:00:00Z" })
-      .eq("id", post.id)
-      .catch(() => {});
+    try {
+      await serviceDb
+        .from("posts")
+        .update({ schedule_time: "2099-01-01T00:00:00Z" })
+        .eq("id", post.id);
+    } catch {}
 
     return res.json({ success: true, results });
   } catch (err: any) {

@@ -101,11 +101,14 @@ async function checkDuePosts() {
 
         if (allDone) {
           // Mark as processed so DB query won't re-select after restart
-          await serviceDb
-            .from("posts")
-            .update({ schedule_time: "2099-01-01T00:00:00Z" })
-            .eq("id", post.id)
-            .catch((err: any) => console.error(`[Scheduler] Failed to mark post ${post.id} done:`, err.message));
+          try {
+            await serviceDb
+              .from("posts")
+              .update({ schedule_time: "2099-01-01T00:00:00Z" })
+              .eq("id", post.id);
+          } catch (err: any) {
+            console.error(`[Scheduler] Failed to mark post ${post.id} done:`, err.message);
+          }
         }
 
         console.log(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
