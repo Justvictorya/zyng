@@ -15,6 +15,7 @@ export interface Post {
   caption: string;
   platforms: string;
   media_urls: string;
+  platform_captions?: string;
   schedule_time: string;
   status: "scheduled" | "published" | "draft";
 }

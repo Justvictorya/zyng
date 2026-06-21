@@ -14,9 +14,10 @@ interface PublishResult {
 export async function publishPost(
   postId: string,
   userId: string,
-  caption: string,
+  defaultCaption: string,
   platforms: string[],
-  mediaUrls: string[]
+  mediaUrls: string[],
+  platformCaptions?: Record<string, string>
 ): Promise<PublishResult[]> {
   const results: PublishResult[] = [];
 
@@ -34,6 +35,8 @@ export async function publishPost(
       results.push({ platform, success: false, error: "Account not connected" });
       continue;
     }
+
+    const caption = platformCaptions?.[platform] || defaultCaption;
 
     try {
       const result = await publishToPlatform(platform, account, caption, mediaUrls);

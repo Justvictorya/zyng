@@ -48,21 +48,22 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
-  const { caption, platforms, media_urls, schedule_time } = parsed.data;
+  const { caption, platforms, media_urls, platform_captions, schedule_time } = parsed.data;
 
   try {
-    const { data, error } = await supabase
-      .from("posts")
-      .insert([
-        {
-          user_id: userId,
-          caption,
-          platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
-          schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
-        },
-      ])
-      .select()
-      .single();
+      const insertData: any = {
+        user_id: userId,
+        caption,
+        platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
+        schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
+      };
+      if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
+
+      const { data, error } = await supabase
+        .from("posts")
+        .insert([insertData])
+        .select()
+        .single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
 
@@ -79,7 +80,7 @@ router.post("/", async (req: Request, res: Response) => {
     const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
 
     if (platformList.length > 0) {
-      publishPost(data.id, userId, caption, platformList, urls).catch((err) =>
+      publishPost(data.id, userId, caption, platformList, urls, platform_captions).catch((err) =>
         console.error(`[Publisher] Post ${data.id} publish error:`, err)
       );
     }
@@ -112,6 +113,9 @@ router.put("/:id", async (req: Request, res: Response) => {
       : parsed.data.platforms;
   }
   if (parsed.data.schedule_time !== undefined) updates.schedule_time = parsed.data.schedule_time;
+  if (parsed.data.platform_captions !== undefined) {
+    updates.platform_captions = JSON.stringify(parsed.data.platform_captions);
+  }
 
   try {
     const { data, error } = await supabase
@@ -185,12 +189,21 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
       if (Array.isArray(parsed)) mediaUrls.push(...parsed);
     } catch {}
 
+    let platformCaptions: Record<string, string> | undefined;
+    try {
+      const parsed = typeof post.platform_captions === "string"
+        ? JSON.parse(post.platform_captions)
+        : post.platform_captions;
+      if (parsed && typeof parsed === "object") platformCaptions = parsed;
+    } catch {}
+
     const results = await publishPost(
       post.id,
       post.user_id,
       post.caption || "",
       platforms,
-      mediaUrls
+      mediaUrls,
+      platformCaptions
     );
 
     return res.json({ success: true, results });

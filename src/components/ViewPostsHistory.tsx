@@ -234,9 +234,27 @@ export default function ViewPostsHistory() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-300 font-sans leading-relaxed break-words whitespace-pre-wrap select-text">
-                      {post.caption}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-300 font-sans leading-relaxed break-words whitespace-pre-wrap select-text">
+                        {post.caption}
+                      </p>
+                      {post.platform_captions && (() => {
+                        let pc: Record<string, string> = {};
+                        try { pc = JSON.parse(post.platform_captions); } catch {}
+                        const entries = Object.entries(pc).filter(([_, v]) => v.trim());
+                        if (entries.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {entries.map(([platform, cap]) => (
+                              <div key={platform} className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[10px] max-w-[300px]">
+                                <span className="font-mono font-bold text-indigo-400 capitalize">{platform}:</span>
+                                <span className="text-slate-400 ml-1 line-clamp-1">{cap}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   )}
 
                   {post.media_urls && (() => {

@@ -45,6 +45,8 @@ export default function ViewCreatePost() {
   // Base composer states
   const [caption, setCaption] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [platformCaptions, setPlatformCaptions] = useState<Record<string, string>>({});
+  const [editingPlatformCaption, setEditingPlatformCaption] = useState<string | null>(null);
   const [scheduleTime, setScheduleTime] = useState("");
   const [nepaProofHold, setNepaProofHold] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
@@ -129,6 +131,7 @@ export default function ViewCreatePost() {
       const draftData = {
         caption,
         platforms: selectedPlatforms,
+        platformCaptions,
         scheduleTime
       };
       localStorage.setItem("zyng_nepa_draft", JSON.stringify(draftData));
@@ -148,6 +151,7 @@ export default function ViewCreatePost() {
           const parsed = JSON.parse(cached);
           if (parsed.caption) setCaption(parsed.caption);
           if (parsed.platforms) setSelectedPlatforms(parsed.platforms);
+          if (parsed.platformCaptions) setPlatformCaptions(parsed.platformCaptions);
           if (parsed.scheduleTime) setScheduleTime(parsed.scheduleTime);
           
           setSuccessMessage("NEPA-Proof Draft recovered successfully!");
@@ -184,6 +188,7 @@ export default function ViewCreatePost() {
   const togglePlatform = (id: string) => {
     if (selectedPlatforms.includes(id)) {
       setSelectedPlatforms(selectedPlatforms.filter(p => p !== id));
+      if (editingPlatformCaption === id) setEditingPlatformCaption(null);
     } else {
       setSelectedPlatforms([...selectedPlatforms, id]);
     }
@@ -330,6 +335,7 @@ export default function ViewCreatePost() {
       id: Date.now().toString(),
       caption,
       platforms: selectedPlatforms,
+      platformCaptions,
       scheduleTime,
       savedAt: new Date().toISOString()
     };
@@ -340,9 +346,10 @@ export default function ViewCreatePost() {
     setTimeout(() => setSuccessMessage(""), 2000);
   };
 
-  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string}) => {
+  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; platformCaptions?: Record<string, string>; scheduleTime: string; savedAt: string}) => {
     setCaption(draft.caption);
     setSelectedPlatforms(draft.platforms);
+    if (draft.platformCaptions) setPlatformCaptions(draft.platformCaptions);
     setScheduleTime(draft.scheduleTime);
     setSuccessMessage("Draft loaded into composer!");
     setTimeout(() => setSuccessMessage(""), 2000);
@@ -464,15 +471,21 @@ export default function ViewCreatePost() {
     try {
       const urls = await uploadFiles();
 
+      const body: any = {
+        caption,
+        platforms: selectedPlatforms,
+        media_urls: urls,
+        schedule_time: scheduleTime || new Date(Date.now() + 3600000).toISOString(),
+      };
+      const customCaptions = Object.fromEntries(
+        Object.entries(platformCaptions).filter(([_, v]) => v.trim())
+      );
+      if (Object.keys(customCaptions).length > 0) body.platform_captions = customCaptions;
+
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caption,
-          platforms: selectedPlatforms,
-          media_urls: urls,
-          schedule_time: scheduleTime || new Date(Date.now() + 3600000).toISOString()
-        })
+        body: JSON.stringify(body)
       });
       
       const data = await res.json();
@@ -651,14 +664,95 @@ export default function ViewCreatePost() {
                     {isSelected && (
                       <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-indigo-400 rounded-full"></span>
                     )}
-                    {connectedPlatforms.includes(plat.id) && !isSelected && (
-                      <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-emerald-400 rounded-full"></span>
+                    <span className={`absolute top-2 right-2 h-1.5 w-1.5 rounded-full ${
+                      isSelected
+                        ? platformCaptions[plat.id]?.trim()
+                          ? "bg-amber-400"
+                          : "bg-indigo-400"
+                        : connectedPlatforms.includes(plat.id)
+                          ? "bg-emerald-400"
+                          : "hidden"
+                    }`} />
+                    {isSelected && (
+                      <span className="absolute bottom-2 right-2 text-[8px] font-mono text-slate-500">
+                        {platformCaptions[plat.id]?.trim() ? "Custom" : "Default"}
+                      </span>
                     )}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Per-Platform Caption Editor */}
+          {selectedPlatforms.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+                Platform-Specific Captions
+              </label>
+              <p className="text-[10px] text-slate-500">Click a platform below to write a custom caption just for it. Platforms without custom captions use your default caption above.</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedPlatforms.map((pid) => {
+                  const opt = platformOptions.find((o) => o.id === pid);
+                  const Icon = opt?.icon || MessageSquare;
+                  const hasCustom = !!platformCaptions[pid]?.trim();
+                  return (
+                    <button
+                      key={pid}
+                      onClick={() => setEditingPlatformCaption(editingPlatformCaption === pid ? null : pid)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-mono transition-all cursor-pointer ${
+                        editingPlatformCaption === pid
+                          ? "border-indigo-500 bg-indigo-500/10 text-indigo-300"
+                          : hasCustom
+                            ? "border-amber-500/30 bg-amber-500/5 text-amber-400"
+                            : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
+                      {Icon && <Icon className="h-3 w-3" />}
+                      <span className="capitalize">{pid}</span>
+                      {hasCustom && <span className="text-[8px] text-amber-400">(custom)</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {editingPlatformCaption && (
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-indigo-400 uppercase font-bold">
+                      Custom caption for {platformOptions.find((o) => o.id === editingPlatformCaption)?.label || editingPlatformCaption}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setPlatformCaptions((prev) => {
+                          const next = { ...prev };
+                          delete next[editingPlatformCaption];
+                          return next;
+                        });
+                        setEditingPlatformCaption(null);
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                    >
+                      Reset to default
+                    </button>
+                  </div>
+                  <textarea
+                    value={platformCaptions[editingPlatformCaption] || ""}
+                    onChange={(e) =>
+                      setPlatformCaptions((prev) => ({ ...prev, [editingPlatformCaption]: e.target.value }))
+                    }
+                    placeholder={`Write a custom version for ${editingPlatformCaption}... (leave empty to use the default caption)`}
+                    maxLength={2200}
+                    className="w-full h-24 bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none font-sans"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>{(platformCaptions[editingPlatformCaption] || "").length} / 2200</span>
+                    <span className="text-indigo-400">Default: {caption.substring(0, 40)}{caption.length > 40 ? "..." : ""}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Platform Previews */}
           {selectedPlatforms.length > 0 && caption.trim() && (
@@ -668,7 +762,7 @@ export default function ViewCreatePost() {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {selectedPlatforms.map((p) => (
-                  <PreviewCard key={p} platform={p} caption={caption} />
+                  <PreviewCard key={p} platform={p} caption={platformCaptions[p]?.trim() || caption} />
                 ))}
               </div>
             </div>
@@ -755,6 +849,8 @@ export default function ViewCreatePost() {
           <button 
             onClick={() => {
               setCaption("");
+              setPlatformCaptions({});
+              setEditingPlatformCaption(null);
               setSelectedFiles([]);
               setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
               setMediaUrls([]);

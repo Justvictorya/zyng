@@ -45,8 +45,16 @@ async function checkDuePosts() {
           if (Array.isArray(parsed)) mediaUrls.push(...parsed);
         } catch {}
 
+        let platformCaptions: Record<string, string> | undefined;
+        try {
+          const parsed = typeof post.platform_captions === "string"
+            ? JSON.parse(post.platform_captions)
+            : post.platform_captions;
+          if (parsed && typeof parsed === "object") platformCaptions = parsed;
+        } catch {}
+
         console.log(`[Scheduler] Publishing post ${post.id}...`);
-        await publishPost(post.id, post.user_id, post.caption || "", platforms, mediaUrls);
+        await publishPost(post.id, post.user_id, post.caption || "", platforms, mediaUrls, platformCaptions);
         console.log(`[Scheduler] Post ${post.id} published`);
       } catch (err: any) {
         console.error(`[Scheduler] Post ${post.id} failed:`, err.message);
