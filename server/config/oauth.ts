@@ -10,6 +10,7 @@ interface OAuthPlatform {
   profileParser: (data: any) => { platformUserId: string; platformUserName: string };
   needsPkce?: boolean;
   useClientKey?: boolean;
+  extraAuthorizeParams?: string;
 }
 
 export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
@@ -74,9 +75,10 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     tokenUrl: "https://oauth2.googleapis.com/token",
     clientIdEnv: "YOUTUBE_CLIENT_ID",
     clientSecretEnv: "YOUTUBE_CLIENT_SECRET",
-    scope: "https://www.googleapis.com/auth/youtube.upload",
+    scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile",
     profileUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
     profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
+    extraAuthorizeParams: "access_type=offline&prompt=consent",
   },
 };
 

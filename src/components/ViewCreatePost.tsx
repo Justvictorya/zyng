@@ -661,6 +661,7 @@ export default function ViewCreatePost() {
               {platformOptions.map((plat) => {
                 const isSelected = selectedPlatforms.includes(plat.id);
                 const Icon = plat.icon;
+                const requirement = plat.id === "youtube" || plat.id === "tiktok" ? "Video needed" : plat.id === "instagram" ? "Image needed" : "";
                 return (
                   <button
                     key={plat.id}
@@ -682,6 +683,9 @@ export default function ViewCreatePost() {
                             ? "Connected"
                             : "Not connected"}
                       </span>
+                      {requirement && (
+                        <span className="text-[8px] text-amber-500/70 font-mono block mt-0.5">{requirement}</span>
+                      )}
                     </div>
 
                     {isSelected && (

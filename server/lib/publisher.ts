@@ -68,6 +68,8 @@ async function publishToPlatform(
       return publishToLinkedIn(account, caption, mediaUrls);
     case "youtube":
       return publishToYouTube(account, caption, mediaUrls);
+    case "whatsapp":
+      return publishToWhatsApp(account, caption, mediaUrls);
     default:
       return { platform, success: false, error: `Unsupported platform: ${platform}` };
   }
@@ -214,6 +216,91 @@ async function publishToLinkedIn(account: any, caption: string, mediaUrls: strin
   return { platform: "linkedin", success: true, postId: data.id };
 }
 
+async function publishToWhatsApp(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
+  const token = account.access_token;
+
+  const phoneRes = await fetch(`https://graph.facebook.com/v22.0/${account.platform_user_id}/whatsapp_business_messaging?fields=phone_numbers`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const phoneData = await phoneRes.json();
+  const phoneNumberId = phoneData?.phone_numbers?.[0]?.id;
+  if (!phoneNumberId) {
+    return { platform: "whatsapp", success: false, error: "No WhatsApp Business phone number found. Ensure your Facebook app has WhatsApp Business Messaging configured." };
+  }
+
+  const mediaId: string | null = null; // TODO: upload media ref if needed
+  const body: any = {
+    messaging_product: "whatsapp",
+    recipient_type: "broadcast",
+    to: phoneNumberId,
+    type: "text",
+    text: { preview_url: false, body: caption },
+  };
+
+  const res = await fetch(`https://graph.facebook.com/v22.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) return { platform: "whatsapp", success: false, error: data.error.message };
+  return { platform: "whatsapp", success: true, postId: data.messages?.[0]?.id };
+}
+
 async function publishToYouTube(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
-  return { platform: "youtube", success: false, error: "YouTube upload requires OAuth 2.0 with refresh token — not yet implemented" };
+  const videoUrl = mediaUrls.find((u) => u.match(/\.(mp4|mov|avi|webm|mkv)$/i)) || mediaUrls[0];
+  if (!videoUrl) {
+    return { platform: "youtube", success: false, error: "YouTube requires a video file" };
+  }
+
+  const body = {
+    snippet: {
+      title: caption.substring(0, 100),
+      description: caption,
+    },
+    status: { privacyStatus: "public", selfDeclaredMadeForKids: false },
+  };
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${account.access_token}`,
+    "Content-Type": "application/json",
+  };
+
+  const insertRes = await fetch(
+    "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+    { method: "POST", headers, body: JSON.stringify(body) }
+  );
+
+  if (!insertRes.ok) {
+    const err = await insertRes.json().catch(() => ({}));
+    return { platform: "youtube", success: false, error: err.error?.message || insertRes.statusText };
+  }
+
+  const uploadUrl = insertRes.headers.get("location");
+  if (!uploadUrl) {
+    return { platform: "youtube", success: false, error: "No upload URL returned from YouTube" };
+  }
+
+  const videoRes = await fetch(videoUrl);
+  if (!videoRes.ok) {
+    return { platform: "youtube", success: false, error: "Failed to fetch video from URL" };
+  }
+  const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "video/*", "Content-Length": String(videoBuffer.length) },
+    body: videoBuffer,
+  });
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(() => "");
+    return { platform: "youtube", success: false, error: errText || uploadRes.statusText };
+  }
+
+  const uploadData = await uploadRes.json().catch(() => ({}));
+  return { platform: "youtube", success: true, postId: uploadData.id };
 }

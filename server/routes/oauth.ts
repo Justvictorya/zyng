@@ -40,6 +40,10 @@ router.get("/:platform/connect", optionalAuth, async (req: Request, res: Respons
     authUrl += `&code_challenge=${codeChallenge}&code_challenge_method=S256`;
   }
 
+  if (cfg.extraAuthorizeParams) {
+    authUrl += `&${cfg.extraAuthorizeParams}`;
+  }
+
   res.redirect(authUrl);
 });
 
