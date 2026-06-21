@@ -91,10 +91,11 @@ export default function ViewCreatePost() {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("zyng_user");
-    if (!savedUser) return;
-    const uid = JSON.parse(savedUser).id;
-    fetch(`/api/auth/accounts?user_id=${uid}`)
+    const token = localStorage.getItem("zyng_token");
+    if (!token) return;
+    fetch("/api/auth/accounts", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setConnectedPlatforms(data.accounts.map((a: any) => a.platform));
@@ -373,10 +374,11 @@ export default function ViewCreatePost() {
 
   const postDraft = async (draft: {id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string}) => {
     setIsSaving(true);
+    const token = localStorage.getItem("zyng_token");
     try {
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           caption: draft.caption,
           platforms: draft.platforms,
@@ -401,11 +403,14 @@ export default function ViewCreatePost() {
 
   // Upload a single file (chunked if > 50MB)
   const uploadSingleFile = async (file: File): Promise<string> => {
+    const token = localStorage.getItem("zyng_token");
+    const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
     // Files under 50MB use simple upload
     if (file.size <= 50 * 1024 * 1024) {
       const formData = new FormData();
       formData.append("files", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const res = await fetch("/api/upload", { method: "POST", headers: { ...authHeader }, body: formData });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       return data.urls[0];
@@ -429,7 +434,7 @@ export default function ViewCreatePost() {
       formData.append("originalName", file.name);
       formData.append("mimeType", file.type);
 
-      const res = await fetch("/api/upload/chunk", { method: "POST", body: formData });
+      const res = await fetch("/api/upload/chunk", { method: "POST", headers: { ...authHeader }, body: formData });
       const data = await res.json();
       if (!data.success) throw new Error(`Chunk ${i} failed: ${data.error}`);
     }
@@ -437,7 +442,7 @@ export default function ViewCreatePost() {
     // Complete the upload
     const completeRes = await fetch("/api/upload/complete", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader },
       body: JSON.stringify({ fileId, originalName: file.name, mimeType: file.type }),
     });
     const completeData = await completeRes.json();
@@ -501,9 +506,10 @@ export default function ViewCreatePost() {
         }
       }
 
+      const token = localStorage.getItem("zyng_token");
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(body)
       });
       

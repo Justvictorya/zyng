@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, adminAuth } from "../lib/supabase";
 import { createPostSchema, updatePostSchema } from "../middleware/validate";
 import { savePostMedia, getPostMedia, getAllMedia, deletePostMedia } from "../lib/storage";
 import { publishPost } from "../lib/publisher";
@@ -41,6 +41,32 @@ router.get("/", async (req: Request, res: Response) => {
 router.post("/", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+
+  const { data: userData, error: userError } = await adminAuth.getUserById(userId);
+  if (userError) return res.status(500).json({ success: false, error: userError.message });
+
+  const tier = userData.user?.user_metadata?.tier || "Free";
+
+  // Free tier: max 10 posts per month, max 2 connected channels
+  if (tier === "Free") {
+    const { data: accounts } = await supabase.rpc("get_connected_accounts", { p_user_id: userId });
+    const connectedCount = (accounts as any[] || []).length;
+    if (connectedCount > 2) {
+      return res.status(403).json({ success: false, error: "Free plan limited to 2 connected channels. Upgrade to Pro." });
+    }
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", monthStart.toISOString());
+    if (count && count >= 10) {
+      return res.status(403).json({ success: false, error: "Free plan limited to 10 posts per month. Upgrade to Pro for unlimited." });
+    }
+  }
 
   const parsed = createPostSchema.safeParse(req.body);
   if (!parsed.success) {

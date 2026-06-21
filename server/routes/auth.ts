@@ -28,12 +28,15 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
     const { data, error } = await adminAuth.createUser({
       email,
       password,
-      user_metadata: { full_name: name },
+      user_metadata: { full_name: name, tier: "Free" },
     });
 
     if (error) {
       return res.status(400).json({ success: false, error: error.message });
     }
+
+    // Sign in to create a session so the client gets an access token
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({ email, password });
 
     const user = {
       id: data.user!.id,
@@ -47,7 +50,13 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
     };
 
-    return res.json({ success: true, user });
+    return res.json({
+      success: true,
+      user,
+      session: sessionData?.session
+        ? { access_token: sessionData.session.access_token, refresh_token: sessionData.session.refresh_token }
+        : undefined,
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -205,12 +214,19 @@ router.post("/tiktok-login", async (req: Request, res: Response) => {
         joined: new Date(existing.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
         avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
       };
-      return res.json({ success: true, user });
+      const tempPassword = crypto.randomUUID() + "Zyng!1";
+      await adminAuth.updateUserById(existing.id, { password: tempPassword });
+      const { data: sd } = await supabase.auth.signInWithPassword({ email, password: tempPassword });
+      return res.json({
+        success: true, user,
+        session: sd.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
+      });
     }
 
+    const password = crypto.randomUUID() + "Zyng!2";
     const { data, error } = await adminAuth.createUser({
       email,
-      password: crypto.randomUUID(),
+      password,
       user_metadata: { full_name: name },
       email_confirm: true,
     });
@@ -226,7 +242,11 @@ router.post("/tiktok-login", async (req: Request, res: Response) => {
       avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
     };
 
-    return res.json({ success: true, user });
+    const { data: sd } = await supabase.auth.signInWithPassword({ email, password });
+    return res.json({
+      success: true, user,
+      session: sd.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
+    });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

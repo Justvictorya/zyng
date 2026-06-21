@@ -1,5 +1,36 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { UserProfile, Post, DialectType } from "../types";
+import { supabase } from "../lib/supabase-client";
+
+function decodeJwt(token: string): any {
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token: string): boolean {
+  const payload = decodeJwt(token);
+  if (!payload?.exp) return true;
+  return Date.now() >= payload.exp * 1000;
+}
+
+async function ensureValidToken(): Promise<string | null> {
+  const token = localStorage.getItem("zyng_token");
+  if (!token) return null;
+  if (!isTokenExpired(token)) return token;
+
+  // Token expired — try Supabase session refresh
+  const { data, error } = await supabase.auth.refreshSession();
+  if (error || !data.session) {
+    localStorage.removeItem("zyng_token");
+    localStorage.removeItem("zyng_user");
+    return null;
+  }
+  localStorage.setItem("zyng_token", data.session.access_token);
+  return data.session.access_token;
+}
 
 interface ZyngContextValue {
   currentUser: UserProfile | null;
@@ -36,6 +67,15 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   const [nepaDraftActive, setNepaDraftActive] = useState(false);
   const [triggerDraftRecoverSignal, setTriggerDraftRecoverSignal] = useState(false);
 
+  // Check token validity on mount
+  useEffect(() => {
+    ensureValidToken().then((token) => {
+      if (!token && currentUser) {
+        setCurrentUser(null);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const cached = localStorage.getItem("zyng_nepa_draft");
     if (cached) {
@@ -51,9 +91,11 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   const loadPosts = useCallback(async () => {
     setIsPostsLoading(true);
     try {
-      const savedUser = localStorage.getItem("zyng_user");
-      const uid = savedUser ? JSON.parse(savedUser).id : null;
-      const res = await fetch(`/api/posts${uid ? "?user_id=" + uid : ""}`);
+      const token = await ensureValidToken();
+      if (!token) return;
+      const res = await fetch("/api/posts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (data.success) setPosts(data.posts);
     } catch (e) {
@@ -66,6 +108,7 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem("zyng_user");
+    localStorage.removeItem("zyng_token");
   };
 
   const handlePostDeleted = (id: string) => {

@@ -11,8 +11,27 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 app.set("trust proxy", 1);
 app.use(express.json());
 
+// HTTPS redirect for production behind Railway/reverse proxy
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const proto = req.headers["x-forwarded-proto"] || req.protocol;
+  if (proto === "http" && process.env.NODE_ENV === "production") {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+  next();
+});
+
+// CORS — restrict to same origin in production
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const host = req.headers.host;
+  const allowed =
+    !origin ||
+    origin === `https://${host}` ||
+    origin === `http://${host}` ||
+    origin === `http://localhost:${PORT}` ||
+    origin === `http://localhost:5173` ||
+    process.env.NODE_ENV !== "production";
+  res.setHeader("Access-Control-Allow-Origin", allowed ? origin! : "null");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.sendStatus(200);
