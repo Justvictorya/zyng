@@ -16,6 +16,7 @@ export interface Post {
   platforms: string;
   media_urls: string;
   platform_captions?: string;
+  platform_schedule?: string;
   schedule_time: string;
   status: "draft" | "scheduled" | "published" | "failed";
   created_at: string;

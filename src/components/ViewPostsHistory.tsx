@@ -281,18 +281,33 @@ export default function ViewPostsHistory() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-slate-850 pt-3 text-[11px]">
                   
                   {/* Local Timing Indicator */}
-                  <div className="flex items-center gap-2 text-slate-400 font-sans">
-                    <Clock className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                    <span>Broadcast Target:</span>
-                    <span className="text-slate-300 font-mono font-medium">
-                      {new Date(post.schedule_time).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })} WAT
-                    </span>
+                  <div className="text-slate-400 font-sans text-[11px] space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                      <span>Broadcast Target:</span>
+                      <span className="text-slate-300 font-mono font-medium">
+                        {new Date(post.schedule_time).toLocaleDateString("en-US", {
+                          weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                        })} WAT
+                      </span>
+                    </div>
+                    {post.platform_schedule && (() => {
+                      let ps: Record<string, string> = {};
+                      try { ps = JSON.parse(post.platform_schedule); } catch {}
+                      const entries = Object.entries(ps).filter(([_, v]) => v);
+                      if (entries.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-2 ml-5">
+                          {entries.map(([platform, t]) => (
+                            <span key={platform} className="text-[9px] font-mono text-slate-500">
+                              {platform}: {new Date(t).toLocaleDateString("en-US", {
+                                weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                              })} WAT
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {!isEditing && (

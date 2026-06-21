@@ -46,15 +46,6 @@ export async function publishPost(
     }
   }
 
-  try {
-    await supabase
-      .from("posts")
-      .update({ publish_results: JSON.stringify(results) })
-      .eq("id", postId);
-  } catch {
-    // Column may not exist yet — safe to ignore
-  }
-
   return results;
 }
 

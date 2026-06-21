@@ -12,6 +12,21 @@ export function startScheduler() {
   checkDuePosts();
 }
 
+interface PublishResult {
+  platform: string;
+  success: boolean;
+}
+
+function parseJson(raw: any): any {
+  try { return typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return null; }
+}
+
+function getPublishedPlatforms(post: any): string[] {
+  const pr = parseJson(post.publish_results);
+  if (Array.isArray(pr)) return pr.map((r: any) => r.platform);
+  return [];
+}
+
 async function checkDuePosts() {
   try {
     const now = new Date().toISOString();
@@ -19,8 +34,7 @@ async function checkDuePosts() {
       .from("posts")
       .select("*")
       .lt("schedule_time", now)
-      .is("publish_results", null)
-      .limit(20);
+      .limit(50);
 
     if (error) {
       console.error("[Scheduler] Query error:", error.message);
@@ -29,33 +43,54 @@ async function checkDuePosts() {
 
     if (!posts || posts.length === 0) return;
 
-    console.log(`[Scheduler] Found ${posts.length} due post(s)`);
-
     for (const post of posts) {
       try {
-        const platforms = typeof post.platforms === "string"
+        const allPlatforms = typeof post.platforms === "string"
           ? post.platforms.split(",").map((p: string) => p.trim()).filter(Boolean)
           : post.platforms || [];
 
+        const published = getPublishedPlatforms(post);
+        const remaining = allPlatforms.filter((p: string) => !published.includes(p));
+
+        if (remaining.length === 0) continue;
+
+        const platformSchedule: Record<string, string> = parseJson(post.platform_schedule) || {};
+        const hasPerPlatformSchedule = Object.keys(platformSchedule).length > 0;
+
+        let toPublish: string[];
+
+        if (hasPerPlatformSchedule) {
+          toPublish = remaining.filter((p: string) => {
+            const t = platformSchedule[p];
+            return t && new Date(t) <= new Date();
+          });
+        } else {
+          toPublish = remaining;
+        }
+
+        if (toPublish.length === 0) continue;
+
         const mediaUrls: string[] = [];
-        try {
-          const parsed = typeof post.media_urls === "string"
-            ? JSON.parse(post.media_urls)
-            : post.media_urls || [];
-          if (Array.isArray(parsed)) mediaUrls.push(...parsed);
-        } catch {}
+        const parsedMedia = parseJson(post.media_urls);
+        if (Array.isArray(parsedMedia)) mediaUrls.push(...parsedMedia);
 
-        let platformCaptions: Record<string, string> | undefined;
-        try {
-          const parsed = typeof post.platform_captions === "string"
-            ? JSON.parse(post.platform_captions)
-            : post.platform_captions;
-          if (parsed && typeof parsed === "object") platformCaptions = parsed;
-        } catch {}
+        const platformCaptions: Record<string, string> | undefined = parseJson(post.platform_captions) || undefined;
 
-        console.log(`[Scheduler] Publishing post ${post.id}...`);
-        await publishPost(post.id, post.user_id, post.caption || "", platforms, mediaUrls, platformCaptions);
-        console.log(`[Scheduler] Post ${post.id} published`);
+        console.log(`[Scheduler] Publishing post ${post.id} to [${toPublish.join(",")}]${hasPerPlatformSchedule ? " (per-platform schedule)" : ""}`);
+
+        const results = await publishPost(
+          post.id, post.user_id, post.caption || "",
+          toPublish, mediaUrls, platformCaptions
+        );
+
+        const allResults = [...published, ...results.map((r) => ({ platform: r.platform, success: r.success }))];
+
+        await supabase
+          .from("posts")
+          .update({ publish_results: JSON.stringify(allResults) })
+          .eq("id", post.id);
+
+        console.log(`[Scheduler] Post ${post.id} — ${allResults.length}/${allPlatforms.length} platforms done`);
       } catch (err: any) {
         console.error(`[Scheduler] Post ${post.id} failed:`, err.message);
       }

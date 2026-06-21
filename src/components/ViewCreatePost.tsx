@@ -48,6 +48,8 @@ export default function ViewCreatePost() {
   const [platformCaptions, setPlatformCaptions] = useState<Record<string, string>>({});
   const [editingPlatformCaption, setEditingPlatformCaption] = useState<string | null>(null);
   const [scheduleTime, setScheduleTime] = useState("");
+  const [perPlatformSchedule, setPerPlatformSchedule] = useState(false);
+  const [platformSchedule, setPlatformSchedule] = useState<Record<string, string>>({});
   const [nepaProofHold, setNepaProofHold] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -132,6 +134,8 @@ export default function ViewCreatePost() {
         caption,
         platforms: selectedPlatforms,
         platformCaptions,
+        platformSchedule,
+        perPlatformSchedule,
         scheduleTime
       };
       localStorage.setItem("zyng_nepa_draft", JSON.stringify(draftData));
@@ -152,6 +156,8 @@ export default function ViewCreatePost() {
           if (parsed.caption) setCaption(parsed.caption);
           if (parsed.platforms) setSelectedPlatforms(parsed.platforms);
           if (parsed.platformCaptions) setPlatformCaptions(parsed.platformCaptions);
+          if (parsed.platformSchedule) setPlatformSchedule(parsed.platformSchedule);
+          if (parsed.perPlatformSchedule !== undefined) setPerPlatformSchedule(parsed.perPlatformSchedule);
           if (parsed.scheduleTime) setScheduleTime(parsed.scheduleTime);
           
           setSuccessMessage("NEPA-Proof Draft recovered successfully!");
@@ -336,6 +342,8 @@ export default function ViewCreatePost() {
       caption,
       platforms: selectedPlatforms,
       platformCaptions,
+      platformSchedule,
+      perPlatformSchedule,
       scheduleTime,
       savedAt: new Date().toISOString()
     };
@@ -346,10 +354,12 @@ export default function ViewCreatePost() {
     setTimeout(() => setSuccessMessage(""), 2000);
   };
 
-  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; platformCaptions?: Record<string, string>; scheduleTime: string; savedAt: string}) => {
+  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; platformCaptions?: Record<string, string>; platformSchedule?: Record<string, string>; perPlatformSchedule?: boolean; scheduleTime: string; savedAt: string}) => {
     setCaption(draft.caption);
     setSelectedPlatforms(draft.platforms);
     if (draft.platformCaptions) setPlatformCaptions(draft.platformCaptions);
+    if (draft.platformSchedule) setPlatformSchedule(draft.platformSchedule);
+    if (draft.perPlatformSchedule !== undefined) setPerPlatformSchedule(draft.perPlatformSchedule);
     setScheduleTime(draft.scheduleTime);
     setSuccessMessage("Draft loaded into composer!");
     setTimeout(() => setSuccessMessage(""), 2000);
@@ -482,6 +492,15 @@ export default function ViewCreatePost() {
       );
       if (Object.keys(customCaptions).length > 0) body.platform_captions = customCaptions;
 
+      if (perPlatformSchedule) {
+        const filledSchedule = Object.fromEntries(
+          Object.entries(platformSchedule).filter(([_, v]) => v)
+        );
+        if (Object.keys(filledSchedule).length > 0) {
+          body.platform_schedule = filledSchedule;
+        }
+      }
+
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -492,6 +511,10 @@ export default function ViewCreatePost() {
       if (data.success) {
         setSuccessMessage(t.postSaved);
         setCaption("");
+        setPlatformCaptions({});
+        setEditingPlatformCaption(null);
+        setPerPlatformSchedule(false);
+        setPlatformSchedule({});
         setSelectedFiles([]);
         setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
         setMediaUrls([]);
@@ -769,20 +792,65 @@ export default function ViewCreatePost() {
           )}
 
           {/* Time Picker */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-              Broadcast Scheduler (WAT Time)
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-              <input
-                type="datetime-local"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800/80 rounded-xl pl-11 pr-4.5 py-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-mono cursor-pointer"
-                id="schedule-datetime-picker"
-              />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
+                Broadcast Scheduler (WAT Time)
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-500">Same time</span>
+                <button
+                  onClick={() => setPerPlatformSchedule(!perPlatformSchedule)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    perPlatformSchedule ? "bg-indigo-600" : "bg-slate-800"
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition ${
+                    perPlatformSchedule ? "translate-x-4" : "translate-x-0"
+                  }`} />
+                </button>
+                <span className="text-[10px] text-indigo-400">Per platform</span>
+              </div>
             </div>
+
+            {perPlatformSchedule ? (
+              <div className="space-y-2">
+                {selectedPlatforms.length === 0 ? (
+                  <p className="text-[10px] text-slate-500 italic">Select platforms above to set individual times</p>
+                ) : (
+                  selectedPlatforms.map((pid) => {
+                    const opt = platformOptions.find((o) => o.id === pid);
+                    const Icon = opt?.icon || Calendar;
+                    return (
+                      <div key={pid} className="relative">
+                        <Icon className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-500 capitalize" />
+                        <input
+                          type="datetime-local"
+                          value={platformSchedule[pid] || ""}
+                          onChange={(e) =>
+                            setPlatformSchedule((prev) => ({ ...prev, [pid]: e.target.value }))
+                          }
+                          className="w-full bg-slate-950 border border-slate-800/80 rounded-xl pl-10 pr-4.5 py-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-mono cursor-pointer"
+                          placeholder={`Schedule for ${pid}`}
+                        />
+                        <span className="absolute right-3 top-3 text-[9px] font-mono text-slate-500 capitalize">{pid}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                <input
+                  type="datetime-local"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800/80 rounded-xl pl-11 pr-4.5 py-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-mono cursor-pointer"
+                  id="schedule-datetime-picker"
+                />
+              </div>
+            )}
           </div>
 
           {/* Drafts Panel */}
@@ -851,6 +919,8 @@ export default function ViewCreatePost() {
               setCaption("");
               setPlatformCaptions({});
               setEditingPlatformCaption(null);
+              setPerPlatformSchedule(false);
+              setPlatformSchedule({});
               setSelectedFiles([]);
               setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
               setMediaUrls([]);

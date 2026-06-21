@@ -48,7 +48,7 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: parsed.error.issues[0].message });
   }
 
-  const { caption, platforms, media_urls, platform_captions, schedule_time } = parsed.data;
+  const { caption, platforms, media_urls, platform_captions, platform_schedule, schedule_time } = parsed.data;
 
   try {
       const insertData: any = {
@@ -58,6 +58,7 @@ router.post("/", async (req: Request, res: Response) => {
         schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
       };
       if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
+      if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
 
       const { data, error } = await supabase
         .from("posts")
@@ -80,9 +81,15 @@ router.post("/", async (req: Request, res: Response) => {
     const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
 
     if (platformList.length > 0) {
-      publishPost(data.id, userId, caption, platformList, urls, platform_captions).catch((err) =>
-        console.error(`[Publisher] Post ${data.id} publish error:`, err)
-      );
+      publishPost(data.id, userId, caption, platformList, urls, platform_captions)
+        .then((results) => {
+          supabase
+            .from("posts")
+            .update({ publish_results: JSON.stringify(results) })
+            .eq("id", data.id)
+            .catch(() => {});
+        })
+        .catch((err) => console.error(`[Publisher] Post ${data.id} publish error:`, err));
     }
 
     return res.json({
@@ -115,6 +122,9 @@ router.put("/:id", async (req: Request, res: Response) => {
   if (parsed.data.schedule_time !== undefined) updates.schedule_time = parsed.data.schedule_time;
   if (parsed.data.platform_captions !== undefined) {
     updates.platform_captions = JSON.stringify(parsed.data.platform_captions);
+  }
+  if (parsed.data.platform_schedule !== undefined) {
+    updates.platform_schedule = JSON.stringify(parsed.data.platform_schedule);
   }
 
   try {
@@ -205,6 +215,12 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
       mediaUrls,
       platformCaptions
     );
+
+    await supabase
+      .from("posts")
+      .update({ publish_results: JSON.stringify(results) })
+      .eq("id", post.id)
+      .catch(() => {});
 
     return res.json({ success: true, results });
   } catch (err: any) {

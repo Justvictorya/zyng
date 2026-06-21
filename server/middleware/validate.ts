@@ -16,6 +16,7 @@ export const createPostSchema = z.object({
   platforms: z.union([z.string(), z.array(z.string())]),
   media_urls: z.union([z.string(), z.array(z.string())]).optional(),
   platform_captions: z.record(z.string()).optional(),
+  platform_schedule: z.record(z.string()).optional(),
   schedule_time: z.string().optional(),
 });
 
@@ -24,6 +25,7 @@ export const updatePostSchema = z.object({
   platforms: z.union([z.string(), z.array(z.string())]).optional(),
   media_urls: z.union([z.string(), z.array(z.string())]).optional(),
   platform_captions: z.record(z.string()).optional(),
+  platform_schedule: z.record(z.string()).optional(),
   schedule_time: z.string().optional(),
 });
 
