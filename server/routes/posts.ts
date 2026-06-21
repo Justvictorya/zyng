@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
-import { supabase, adminAuth } from "../lib/supabase";
+import { supabase, adminAuth, serviceDb } from "../lib/supabase";
 import { createPostSchema, updatePostSchema } from "../middleware/validate";
 import { savePostMedia, getPostMedia, getAllMedia, deletePostMedia } from "../lib/storage";
 import { publishPost } from "../lib/publisher";
+import { recordPublishResults } from "../lib/scheduler";
 
 const router = Router();
 
@@ -76,51 +77,51 @@ router.post("/", async (req: Request, res: Response) => {
   const { caption, platforms, media_urls, platform_captions, platform_schedule, schedule_time } = parsed.data;
 
   try {
-      const insertData: any = {
+    const insertData: any = {
+      user_id: userId,
+      caption,
+      platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
+      schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
+    };
+    if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
+    if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
+
+    let { data, error } = await supabase
+      .from("posts")
+      .insert([insertData])
+      .select()
+      .single();
+
+    // Retry without optional JSONB columns if migration hasn't been run
+    if (error && (error.message?.includes("schema cache") || error.message?.includes("column"))) {
+      const fallback: any = {
         user_id: userId,
         caption,
         platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
         schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
       };
-      if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
-      if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
-
-      const { data, error } = await supabase
-        .from("posts")
-        .insert([insertData])
-        .select()
-        .single();
-
-    if (error) return res.status(500).json({ success: false, error: error.message });
+      const r2 = await supabase.from("posts").insert([fallback]).select().single();
+      if (r2.error) return res.status(500).json({ success: false, error: r2.error.message });
+      data = r2.data;
+    } else if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
 
     const urls = media_urls
-      ? Array.isArray(media_urls)
-        ? media_urls
-        : media_urls.split(",").filter(Boolean)
+      ? Array.isArray(media_urls) ? media_urls : media_urls.split(",").filter(Boolean)
       : [];
 
-    if (urls.length > 0) {
-      await savePostMedia(data.id, urls);
-    }
+    if (urls.length > 0) await savePostMedia(data.id, urls);
 
     const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
 
     if (platformList.length > 0) {
       publishPost(data.id, userId, caption, platformList, urls, platform_captions)
-        .then((results) => {
-          supabase
-            .from("posts")
-            .update({ publish_results: JSON.stringify(results) })
-            .eq("id", data.id)
-            .catch(() => {});
-        })
+        .then((results) => recordPublishResults(data.id, results))
         .catch((err) => console.error(`[Publisher] Post ${data.id} publish error:`, err));
     }
 
-    return res.json({
-      success: true,
-      post: { ...data, media_urls: JSON.stringify(urls) },
-    });
+    return res.json({ success: true, post: { ...data, media_urls: JSON.stringify(urls) } });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
@@ -241,9 +242,12 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
       platformCaptions
     );
 
-    await supabase
+    recordPublishResults(post.id, results);
+
+    // Mark as processed in DB so scheduler won't re-pick it up
+    await serviceDb
       .from("posts")
-      .update({ publish_results: JSON.stringify(results) })
+      .update({ schedule_time: "2099-01-01T00:00:00Z" })
       .eq("id", post.id)
       .catch(() => {});
 

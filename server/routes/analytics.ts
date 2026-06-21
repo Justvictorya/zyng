@@ -1,7 +1,23 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../lib/supabase";
+import { getPublishResults } from "../lib/scheduler";
 
 const router = Router();
+
+const PROCESSED_MARKER = "2099-01-01";
+
+function isPublished(post: any): boolean {
+  // Check in-memory results first
+  const mem = getPublishResults(post.id);
+  if (mem && mem.length > 0) return mem.some((r) => r.success);
+  // Check DB column if it exists (after migration is run)
+  try {
+    const pr = typeof post.publish_results === "string" ? JSON.parse(post.publish_results) : post.publish_results;
+    if (Array.isArray(pr)) return pr.some((r: any) => r.success);
+  } catch {}
+  // Fallback: schedule_time sentinel
+  return typeof post.schedule_time === "string" && post.schedule_time.startsWith(PROCESSED_MARKER);
+}
 
 router.get("/dashboard", async (req: Request, res: Response) => {
   const userId = req.userId;
@@ -16,12 +32,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
 
     const postCount = posts?.length || 0;
     const scheduledCount = posts?.filter((p: any) => new Date(p.schedule_time) > new Date()).length || 0;
-    const publishedCount = posts?.filter((p: any) => {
-      try {
-        const pr = typeof p.publish_results === "string" ? JSON.parse(p.publish_results) : p.publish_results;
-        return Array.isArray(pr) && pr.some((r: any) => r.success);
-      } catch { return false; }
-    }).length || 0;
+    const publishedCount = posts?.filter((p: any) => isPublished(p)).length || 0;
 
     const platformCounts: Record<string, number> = {};
     for (const p of posts || []) {
@@ -41,7 +52,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
       platforms: typeof p.platforms === "string" ? p.platforms.split(",") : p.platforms || [],
       created_at: p.created_at,
       schedule_time: p.schedule_time,
-      status: p.publish_results ? "published" : "scheduled",
+      status: isPublished(p) ? "published" : "scheduled",
     }));
 
     const { data: accounts } = await supabase.rpc("get_connected_accounts", { p_user_id: userId });
