@@ -12,13 +12,19 @@ import {
   Globe2,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { DialectType } from "../types";
 import { translations } from "../lib/translations";
 import { useZyng } from "../context/ZyngContext";
 
-export default function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ open, onClose }: SidebarProps) {
   const { dialect, setDialect, currentUser: user, handleLogout } = useZyng();
   const navigate = useNavigate();
   const t = translations[dialect];
@@ -46,7 +52,33 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-black/40 backdrop-blur-md border-r border-white/10 flex flex-col justify-between text-slate-200 shrink-0 h-screen sticky top-0" id="zyng-sidebar">
+    <>
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`
+          w-64 bg-black/40 backdrop-blur-md border-r border-white/10 flex flex-col justify-between
+          text-slate-200 shrink-0 h-screen sticky top-0
+          transition-transform duration-300 ease-in-out z-50
+          ${open ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 lg:sticky lg:z-auto
+        `}
+        id="zyng-sidebar"
+      >
+        {/* Mobile close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 lg:hidden text-slate-400 hover:text-white p-1"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       {/* Brand Header */}
       <div className="p-8">
         <div className="flex items-center gap-3">
@@ -205,5 +237,6 @@ export default function Sidebar() {
         )}
       </div>
     </aside>
+    </>
   );
 }

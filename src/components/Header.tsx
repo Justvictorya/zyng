@@ -59,44 +59,44 @@ export default function Header({ nepaDraftActive, onRecoverDraft }: HeaderProps)
   const Icon = info.icon;
 
   return (
-    <header className="bg-black/30 backdrop-blur-md border-b border-white/5 px-8 py-5 flex items-center justify-between shrink-0" id="zyng-header">
+    <header className="bg-black/30 backdrop-blur-md border-b border-white/5 px-4 sm:px-8 pl-14 sm:pl-8 py-4 sm:py-5 flex items-center justify-between shrink-0 min-h-0" id="zyng-header">
       {/* View Title & Breadcrumb */}
-      <div className="flex items-center gap-4">
-        <div className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-0 text-purple-405">
-          <Icon className="h-5 w-5 text-purple-400" />
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center p-0 shrink-0">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 font-sans tracking-tight">
+        <div className="min-w-0">
+          <h2 className="text-sm sm:text-lg font-bold text-slate-100 flex items-center gap-2 font-sans tracking-tight">
             {info.title}
-            <span className="text-[10px] bg-white/5 text-slate-450 font-normal font-mono border border-white/10 px-20 py-0.5 rounded-full">
+            <span className="text-[10px] bg-white/5 text-slate-450 font-normal font-mono border border-white/10 px-2 sm:px-20 py-0.5 rounded-full hidden sm:inline">
               WAT Timezone
             </span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1 font-sans">
+          <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 font-sans truncate max-w-[180px] sm:max-w-none">
             {info.subtitle}
           </p>
         </div>
       </div>
 
       {/* Utilities Right Hand */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         
         {/* NEPA-Proof Backup Floating Banner */}
         {nepaDraftActive && (
-          <div className="flex items-center gap-2 bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 text-purple-300 rounded-xl px-3.5 py-2 text-xs font-semibold cursor-pointer transition-colors shadow-lg animate-pulse"
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 text-purple-300 rounded-xl px-2 sm:px-3.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold cursor-pointer transition-colors shadow-lg animate-pulse"
                onClick={onRecoverDraft}
                id="nepa-draft-notification"
                title="Click to recover your NEPA-proof draft">
-            <span className="h-2 w-2 rounded-full bg-purple-400 animate-ping"></span>
-            <span className="font-mono text-purple-450 font-bold uppercase text-[10px]">NEPA-Proof Active</span>
+            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-purple-400 animate-ping"></span>
+            <span className="font-mono text-purple-450 font-bold uppercase text-[8px] sm:text-[10px]">NEPA</span>
             <span className="hidden sm:inline text-slate-300">Draft saved</span>
           </div>
         )}
 
         {/* WAT Realtime Digital Clock */}
-        <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 flex items-center gap-2.5 shadow-md">
-          <Clock className="h-3.5 w-3.5 text-purple-400 shrink-0" />
-          <div className="text-right">
+        <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1.5 sm:gap-2.5 shadow-md">
+          <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-purple-400 shrink-0" />
+          <div className="text-right hidden sm:block">
             <span className="text-xs text-purple-300 font-mono font-medium block">
               {watTime || "00:00:00 AM"}
             </span>
@@ -104,6 +104,9 @@ export default function Header({ nepaDraftActive, onRecoverDraft }: HeaderProps)
               Lagos, Nigeria
             </span>
           </div>
+          <span className="text-[10px] text-purple-300 font-mono sm:hidden">
+            {watTime?.split(" ")[0] || ""}
+          </span>
         </div>
 
       </div>
