@@ -216,7 +216,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                   <span className="px-1 py-0.2 text-[8px] leading-tight bg-purple-500/25 text-purple-300 font-mono rounded border border-purple-400/20 font-bold uppercase shrink-0">
                     {user.tier}
                   </span>
-                  <span className="text-[9px] text-slate-450 truncate font-sans">₦12k/mo</span>
                 </div>
               </div>
             </div>

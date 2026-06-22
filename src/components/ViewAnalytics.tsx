@@ -2,18 +2,14 @@ import React, { useState, useEffect } from "react";
 import {
   BarChart2,
   TrendingUp,
-  MapPin,
-  UserPlus,
   Activity,
   Cpu,
-  Target,
   Facebook,
   Instagram,
   Twitter,
   Linkedin,
   Youtube,
   MessageSquare,
-  ArrowUpRight,
   Loader2,
 } from "lucide-react";
 import { translations } from "../lib/translations";
@@ -27,6 +23,8 @@ interface AnalyticsStats {
   platformDistribution: { name: string; count: number; percentage: number }[];
   recentPosts: { caption: string; platforms: string[]; created_at: string; schedule_time: string; status: string }[];
   postsOverTime: { date: string; count: number }[];
+  botStats: Record<string, { totalTargeted: number; published: number; failed: number; pending: number; lastPublished: string | null }>;
+  connectedAccounts: { platform: string; name: string | null; connectedAt: string }[];
 }
 
 const PLATFORM_ICONS: Record<string, any> = {
@@ -52,7 +50,6 @@ const PLATFORM_COLORS: Record<string, string> = {
 export default function ViewAnalytics() {
   const { dialect } = useZyng();
   const t = translations[dialect];
-  const [activeGeoFilter] = useState("all");
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,14 +72,6 @@ export default function ViewAnalytics() {
     };
     fetchStats();
   }, []);
-
-  const nigerianHubs = [
-    { city: "Lagos Hub", state: "Lagos State", rate: "54%", count: "69,200", growth: "+16.3%", color: "indigo" },
-    { city: "Abuja City", state: "FCT", rate: "22%", count: "28,100", growth: "+11.5%", color: "violet" },
-    { city: "Port Harcourt", state: "Rivers State", rate: "12%", count: "15,400", growth: "+8.2%", color: "cyan" },
-    { city: "Kano Center", state: "Kano State", rate: "8%", count: "10,250", growth: "+4.1%", color: "emerald" },
-    { city: "Enugu/Onitsha", state: "Enugu State", rate: "4%", count: "5,500", growth: "+9.0%", color: "amber" },
-  ];
 
   const totalPlatformPosts = stats?.platformDistribution?.reduce((s, p) => s + p.count, 0) || 1;
 
@@ -129,7 +118,7 @@ export default function ViewAnalytics() {
             <span className="text-xs text-slate-400">Connected</span>
             <span className="px-2 py-0.5 bg-cyan-500/15 border border-cyan-500/10 text-cyan-400 text-[10px] rounded font-bold font-mono">Platforms</span>
           </div>
-          <h4 className="text-2xl font-bold font-mono text-slate-100 mt-2">{stats?.connectedPlatforms || 0} / 7</h4>
+          <h4 className="text-2xl font-bold font-mono text-slate-100 mt-2">{stats?.connectedPlatforms || 0}</h4>
           <p className="text-[10px] text-slate-500 mt-1">Social accounts linked</p>
         </div>
       </div>
@@ -170,29 +159,43 @@ export default function ViewAnalytics() {
           </div>
         </div>
 
+        {/* Per-Platform Bot Stats */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md shadow-black/10">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">Regional Click Map</h3>
-            <MapPin className="h-4 w-4 text-slate-500" />
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">Bot Performance</h3>
+            <Cpu className="h-4 w-4 text-slate-500" />
           </div>
-          {activeGeoFilter === "all" && (
-            <div className="space-y-3">
-              {nigerianHubs.map((hub) => (
-                <div key={hub.city} className="flex items-center justify-between py-1.5 border-b border-slate-800/50 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full bg-${hub.color}-500`} />
-                    <span className="text-xs text-slate-300">{hub.city}</span>
-                    <span className="text-[10px] text-slate-550">{hub.state}</span>
+          <div className="space-y-4">
+            {stats?.botStats && Object.keys(stats.botStats).length > 0 ? Object.entries(stats.botStats).map(([platform, data]) => {
+              const Icon = PLATFORM_ICONS[platform] || Activity;
+              const colorClass = PLATFORM_COLORS[platform] || "text-slate-400 bg-slate-500/10 border-slate-500/25";
+              const total = data.totalTargeted;
+              const successRate = total > 0 ? Math.round((data.published / total) * 100) : 0;
+              return (
+                <div key={platform} className="flex items-center gap-3 border-b border-slate-800/50 pb-3 last:border-0 last:pb-0">
+                  <div className={`p-2 rounded-lg border ${colorClass}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-400">{hub.rate}</span>
-                    <span className="text-[10px] font-mono text-slate-550">{hub.count}</span>
-                    <span className="text-[10px] font-mono text-emerald-400">{hub.growth}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-slate-300 font-medium capitalize">{platform}</span>
+                      <span className="text-[10px] font-mono text-slate-500">{data.published}/{total} posted</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${successRate}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-500 mt-1">
+                      <span>{data.pending} pending</span>
+                      <span>{data.failed} failed</span>
+                      <span>{successRate}% success</span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            }) : (
+              <p className="text-xs text-slate-500 text-center py-4">No platform activity yet.</p>
+            )}
+          </div>
         </div>
       </div>
 

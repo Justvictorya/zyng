@@ -22,17 +22,11 @@ export default function ViewDashboard() {
   const navigate = useNavigate();
   const t = translations[dialect];
   
-  const totalReachNum = "128,450";
-  const reachPercentage = "+14.2%";
-  const engagementRateNum = "7.8%";
-  const engagementPercentage = "+2.4%";
-  
   const countScheduled = posts.filter(p => p.status === "scheduled").length;
   const countPublished = posts.filter(p => p.status === "published").length;
 
-  // Let's create beautiful local greeting strings
   const getDialectGreeting = () => {
-    const name = user ? user.name : "Victoria John";
+    const name = user ? user.name : "";
     switch (dialect) {
       case "pidgin":
         return `Kool, how far ${name}! No shaking. Zyng dey fully active.`;
@@ -47,7 +41,6 @@ export default function ViewDashboard() {
     }
   };
 
-  // Safe split helper for platforms list
   const getPlatformsArray = (platformsStr: string) => {
     return platformsStr ? platformsStr.split(",").map(p => p.trim()) : [];
   };
@@ -64,13 +57,13 @@ export default function ViewDashboard() {
           <div className="space-y-2.5 max-w-xl">
             <span className="inline-flex items-center gap-1 bg-purple-500/15 text-purple-350 border border-purple-500/20 px-2.5 py-1 rounded-full text-xs font-semibold font-mono tracking-wide uppercase">
               <Sparkles className="h-3 w-3 text-purple-400 shrink-0" />
-              NIGERIAN HERO CAMPAIGN
+              CAMPAIGN DASHBOARD
             </span>
             <h3 className="text-2xl font-bold font-sans text-slate-100 tracking-tight leading-tight">
               {getDialectGreeting()}
             </h3>
             <p className="text-xs text-slate-400 font-sans leading-relaxed">
-              Your automated campaigns are live across Nigeria. Save up to 27 hours per week using Gemini AI captions and automated social status cross-posting. No dollar hassles at ₦12,000/month.
+              Your automated campaigns. Powered by Gemini AI captions and cross-platform scheduling.
             </p>
           </div>
 
@@ -106,56 +99,51 @@ export default function ViewDashboard() {
           </div>
         </div>
 
-        {/* Total Reach */}
+        {/* Total Posts */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative hover:border-slate-800/80 transition-colors shadow-md">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-slate-400 font-sans">{t.totalReach}</p>
-              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">{totalReachNum}</h4>
+              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">{posts.length}</h4>
             </div>
             <div className="h-10 w-10 bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 rounded-xl flex items-center justify-center">
               <Users className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-4 flex items-center gap-1">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-emerald-400 font-mono text-xs font-semibold">{reachPercentage}</span>
-            <span className="text-xs text-slate-500 font-sans">{t.growthSinceLastMonth}</span>
+            <span className="text-xs text-slate-500 font-sans">Total posts created</span>
           </div>
         </div>
 
-        {/* Engagement Rate */}
+        {/* Published Count */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative hover:border-slate-800/80 transition-colors shadow-md">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-xs text-slate-400 font-sans">{t.engagementRate}</p>
-              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">{engagementRateNum}</h4>
+              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">{countPublished}</h4>
             </div>
             <div className="h-10 w-10 bg-violet-500/10 text-violet-400 border border-violet-500/10 rounded-xl flex items-center justify-center">
               <Activity className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-4 flex items-center gap-1">
-            <TrendingUp className="h-3.5 w-3.5 text-violet-400" />
-            <span className="text-violet-400 font-mono text-xs font-semibold">{engagementPercentage}</span>
-            <span className="text-xs text-slate-500 font-sans">{t.growthSinceLastMonth}</span>
+            <span className="text-xs text-slate-500 font-sans">Successfully published</span>
           </div>
         </div>
 
-        {/* Active Connected Channels */}
+        {/* Waiting (scheduled vs published) */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative hover:border-slate-800/80 transition-colors shadow-md">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-slate-400 font-sans">Active Channels</p>
-              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">7 Networks</h4>
+              <p className="text-xs text-slate-400 font-sans">Pending</p>
+              <h4 className="text-2xl font-mono font-bold text-slate-100 mt-2">{countScheduled}</h4>
             </div>
             <div className="h-10 w-10 bg-cyan-500/10 text-cyan-400 border border-cyan-500/10 rounded-xl flex items-center justify-center">
               <Zap className="h-5 w-5" />
             </div>
           </div>
           <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="text-indigo-400 font-medium font-sans">WhatsApp Status</span>
-            <span>integrated</span>
+            <span className="text-indigo-400 font-medium font-sans">Awaiting broadcast</span>
           </div>
         </div>
 
@@ -169,10 +157,10 @@ export default function ViewDashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h4 className="text-sm font-semibold text-slate-200">{t.analyticsSummary}</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">Impression growth tracker for the month of May & June 2026</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Post activity over time</p>
             </div>
             <span className="text-xs text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 rounded px-2.5 py-1 font-mono">
-              Live Campaign Map
+              Activity Map
             </span>
           </div>
 

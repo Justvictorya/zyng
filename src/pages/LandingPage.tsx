@@ -31,7 +31,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="max-w-2xl text-slate-400 text-sm sm:text-base leading-relaxed">
-          Why source software in USD while charging clients in Naira? Zyng is Nigeria's #1 Social Media Automation engine. Draft, fix slang grammar with Gemini, cross-post to Instagram & WhatsApp status, and scale 27x cheaper at <strong>₦12,000/month</strong>.
+          Zyng is a Social Media Automation engine built for Nigeria. Draft, fix slang grammar with Gemini, cross-post to Instagram & WhatsApp status, and manage all your platforms from one place.
         </p>
 
         <div className="pt-6 flex flex-col sm:flex-row gap-4 items-center shrink-0">
@@ -50,7 +50,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="text-center text-[11px] text-slate-600 font-mono relative z-10 shrink-0">
-        ₦12,000/month standard subscription billing. Integrated securely via Paystack. WAT central lock.
+        Subscription billing available. Powered by Gemini AI.
       </footer>
     </div>
   );

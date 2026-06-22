@@ -1468,8 +1468,8 @@ function PreviewCard({ platform, caption }: { platform: string; caption: string;
       bg: "bg-black", text: "text-white", accent: "text-pink-400",
       actions: (
         <div className="flex gap-2 text-[10px] text-gray-300">
-          <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" /> 0</span>
+          <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" /></span>
+          <span className="flex items-center gap-0.5"><MessageCircle className="h-3 w-3" /></span>
           <span className="flex items-center gap-0.5"><Bookmark className="h-3 w-3" /></span>
         </div>
       )
@@ -1479,10 +1479,10 @@ function PreviewCard({ platform, caption }: { platform: string; caption: string;
       bg: "bg-black", text: "text-gray-100", accent: "text-sky-500",
       actions: (
         <div className="flex gap-3 text-[10px] text-gray-500">
-          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-1"><Share2 className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> 0</span>
+          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /></span>
+          <span className="flex items-center gap-1"><Share2 className="h-3 w-3" /></span>
+          <span className="flex items-center gap-1"><Heart className="h-3 w-3" /></span>
+          <span className="flex items-center gap-1"><Eye className="h-3 w-3" /></span>
         </div>
       )
     },
@@ -1512,30 +1512,30 @@ function PreviewCard({ platform, caption }: { platform: string; caption: string;
       bg: "bg-zinc-900", text: "text-gray-100", accent: "text-red-500",
       actions: (
         <div className="flex gap-3 text-[10px] text-gray-400">
-          <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> 0</span>
-          <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> 0</span>
+          <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" /></span>
+          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /></span>
+          <span className="flex items-center gap-1"><Eye className="h-3 w-3" /></span>
         </div>
       )
     }
   };
 
   const p = previews[platform] || previews.facebook;
-  const initials = "ZN";
-  const timeAgo = "2m";
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className={`${p.bg} rounded-xl p-3 shadow-md border border-slate-700/30 space-y-2 font-sans`}>
       <div className="flex items-center gap-2">
         <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-          {initials}
+          Z
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
             <span className={`text-[11px] font-bold ${p.text} truncate`}>Zyng</span>
             <span className={p.accent}>{p.icon}</span>
           </div>
-          <span className={`text-[9px] ${platform === "twitter" ? "text-gray-500" : "text-gray-400"} block`}>{timeAgo}</span>
+          <span className={`text-[9px] ${platform === "twitter" ? "text-gray-500" : "text-gray-400"} block`}>{timeStr}</span>
         </div>
       </div>
       <p className={`text-[11px] ${p.text} leading-relaxed line-clamp-4 ${p.bg === "bg-white" ? "" : "opacity-90"}`}>

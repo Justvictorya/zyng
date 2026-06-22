@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, Key, RefreshCw } from "lucide-react";
+import { Mail, Lock, RefreshCw } from "lucide-react";
 import { useZyng } from "../context/ZyngContext";
 import { supabase } from "../lib/supabase-client";
 
@@ -42,12 +42,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillVictoria = () => {
-    setEmail("victoryajohn0309@gmail.com");
-    setPassword("password123");
-    setError("");
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center px-4 md:px-8 py-14 bg-[#050507] font-sans" id="login-screen">
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
@@ -68,7 +62,7 @@ export default function LoginPage() {
             <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Email address</label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" placeholder="victoryajohn0309@gmail.com" required />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500" placeholder="you@example.com" required />
             </div>
           </div>
 
@@ -79,7 +73,7 @@ export default function LoginPage() {
             </div>
             <div className="relative">
               <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono" placeholder="password123" required />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono" placeholder="••••••••" required />
             </div>
           </div>
 
@@ -140,14 +134,6 @@ export default function LoginPage() {
               <span className="text-[10px] text-slate-400 group-hover:text-slate-200 font-medium">TikTok</span>
             </button>
           </div>
-        </div>
-
-        <div className="relative border-t border-slate-850/80 pt-4 mt-2">
-          <span className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-900 px-3 text-[9px] font-mono text-slate-500 font-bold uppercase tracking-wide -translate-y-1/2">Hackathon Override</span>
-          <button onClick={fillVictoria} className="w-full bg-slate-950 text-indigo-400 hover:text-indigo-300 border border-indigo-500/15 py-3 px-4.5 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-slate-950/80 cursor-pointer" id="instant-demo-override" title="Loads Victoria John email and password presets into form fields">
-            <Key className="h-4 w-4 shrink-0" />
-            <span>Fill Victoria John Credentials</span>
-          </button>
         </div>
 
         <div className="text-center text-xs text-slate-500 pt-2 selection:bg-none">
