@@ -9,14 +9,8 @@ interface PublishResult {
   platform: string;
   success: boolean;
 }
-// In-memory tracking for publish results (the publish_results column doesn't exist in the DB)
+// In-memory tracking for publish results (also persisted to DB when column exists)
 const publishedResults = new Map<string, PublishResult[]>();
-
-function getPublishedPlatforms(postId: string): string[] {
-  const pr = publishedResults.get(postId);
-  if (pr) return pr.map((r) => r.platform);
-  return [];
-}
 
 export function startScheduler() {
   if (intervalHandle) return;
@@ -47,20 +41,22 @@ async function checkDuePosts() {
     if (!posts || posts.length === 0) return;
 
     for (const post of posts) {
-      // Skip if we already processed this post in this session
-      if (publishedResults.has(post.id)) {
-        const allDone = publishedResults.get(post.id)!.length >= (post.platforms?.split(",").length || 0);
-        if (allDone) continue;
-      }
-
       try {
         const allPlatforms = typeof post.platforms === "string"
           ? post.platforms.split(",").map((p: string) => p.trim()).filter(Boolean)
           : post.platforms || [];
 
-        const published = getPublishedPlatforms(post.id);
-        const remaining = allPlatforms.filter((p: string) => !published.includes(p));
+        // Determine already-published platforms from DB or in-memory
+        let published: string[] = [];
+        const dbPr = parseField(post.publish_results);
+        if (Array.isArray(dbPr)) {
+          published = dbPr.map((r: any) => r.platform);
+        } else {
+          const mem = publishedResults.get(post.id);
+          if (mem) published = mem.map((r) => r.platform);
+        }
 
+        const remaining = allPlatforms.filter((p: string) => !published.includes(p));
         if (remaining.length === 0) continue;
 
         const platformSchedule: Record<string, string> = parseField(post.platform_schedule) || {};
@@ -92,23 +88,31 @@ async function checkDuePosts() {
           toPublish, mediaUrls, platformCaptions
         );
 
-        // Store in-memory
-        const existing = publishedResults.get(post.id) || [];
-        const updatedResults = [...existing, ...results];
+        // Store in-memory + persist to DB
+        const existing = parseField(post.publish_results);
+        const dbExisting: PublishResult[] = Array.isArray(existing) ? existing : (publishedResults.get(post.id) || []);
+        const updatedResults = [...dbExisting, ...results];
         publishedResults.set(post.id, updatedResults);
 
         const allDone = updatedResults.length >= allPlatforms.length;
 
         if (allDone) {
-          // Mark as processed so DB query won't re-select after restart
           try {
             await serviceDb
               .from("posts")
-              .update({ schedule_time: "2099-01-01T00:00:00Z" })
+              .update({ publish_results: JSON.stringify(updatedResults), schedule_time: "2099-01-01T00:00:00Z" })
               .eq("id", post.id);
           } catch (err: any) {
-            console.error(`[Scheduler] Failed to mark post ${post.id} done:`, err.message);
+            console.error(`[Scheduler] Failed to persist results for post ${post.id}:`, err.message);
           }
+        } else {
+          // Partial — still persist so we don't re-publish on restart
+          try {
+            await serviceDb
+              .from("posts")
+              .update({ publish_results: JSON.stringify(updatedResults) })
+              .eq("id", post.id);
+          } catch {}
         }
 
         console.log(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);

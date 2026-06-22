@@ -86,26 +86,13 @@ router.post("/", async (req: Request, res: Response) => {
     if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
     if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
 
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from("posts")
       .insert([insertData])
       .select()
       .single();
 
-    // Retry without optional JSONB columns if migration hasn't been run
-    if (error && (error.message?.includes("schema cache") || error.message?.includes("column"))) {
-      const fallback: any = {
-        user_id: userId,
-        caption,
-        platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
-        schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
-      };
-      const r2 = await supabase.from("posts").insert([fallback]).select().single();
-      if (r2.error) return res.status(500).json({ success: false, error: r2.error.message });
-      data = r2.data;
-    } else if (error) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
+    if (error) return res.status(500).json({ success: false, error: error.message });
 
     const urls = media_urls
       ? Array.isArray(media_urls) ? media_urls : media_urls.split(",").filter(Boolean)
