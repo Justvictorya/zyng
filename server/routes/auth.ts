@@ -77,12 +77,14 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: "Invalid email or password" });
     }
 
+    const tier = data.user.user_metadata?.tier || "Free";
+
     const user = {
       id: data.user.id,
       name: data.user.user_metadata?.full_name || email.split("@")[0],
       email: data.user.email,
-      tier: "Pro",
-      joined: "May 2026",
+      tier,
+      joined: new Date(data.user.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.user.user_metadata?.full_name || email)}`,
     };
 
@@ -128,7 +130,7 @@ router.post("/oauth-login", async (req: Request, res: Response) => {
         id: existing.id,
         name: existing.user_metadata?.full_name || name,
         email: existing.email,
-        tier: "Pro",
+        tier: existing.user_metadata?.tier || "Free",
         joined: new Date(existing.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
         avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
       };
@@ -210,7 +212,7 @@ router.post("/tiktok-login", async (req: Request, res: Response) => {
         id: existing.id,
         name: existing.user_metadata?.full_name || name,
         email: existing.email,
-        tier: "Pro",
+        tier: existing.user_metadata?.tier || "Free",
         joined: new Date(existing.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
         avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
       };

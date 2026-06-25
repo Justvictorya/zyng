@@ -45,6 +45,9 @@ import postsRoutes from "./routes/posts";
 import aiRoutes from "./routes/ai";
 import oauthRoutes from "./routes/oauth";
 import analyticsRoutes from "./routes/analytics";
+import paymentsRoutes from "./routes/payments";
+import profileRoutes from "./routes/profile";
+import teamRoutes from "./routes/team";
 
 import uploadRoutes from "./routes/upload";
 
@@ -55,6 +58,9 @@ app.use("/api/v1/ai", requireAuth, aiRoutes);
 app.use("/api/v1/oauth", oauthRoutes);
 app.use("/api/v1/upload", requireAuth, uploadRoutes);
 app.use("/api/v1/analytics", requireAuth, analyticsRoutes);
+app.use("/api/v1/payments", paymentsRoutes);
+app.use("/api/v1/profile", requireAuth, profileRoutes);
+app.use("/api/v1/team", requireAuth, teamRoutes);
 
 // Legacy API — backward compatible
 app.use("/api/auth", authRoutes);
@@ -63,6 +69,9 @@ app.use("/api/ai", requireAuth, aiRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/upload", requireAuth, uploadRoutes);
 app.use("/api/analytics", requireAuth, analyticsRoutes);
+app.use("/api/payments", paymentsRoutes);
+app.use("/api/profile", requireAuth, profileRoutes);
+app.use("/api/team", requireAuth, teamRoutes);
 
 import { startScheduler } from "./lib/scheduler";
 

@@ -25,6 +25,11 @@ const OAUTH_VARS = [
   "YOUTUBE_CLIENT_SECRET",
 ] as const;
 
+const PAYSTACK_VARS = [
+  "PAYSTACK_PUBLIC_KEY",
+  "PAYSTACK_SECRET_KEY",
+] as const;
+
 function validateEnv() {
   const missing: string[] = [];
 
