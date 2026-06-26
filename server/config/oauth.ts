@@ -19,7 +19,7 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     tokenUrl: "https://graph.facebook.com/v22.0/oauth/access_token",
     clientIdEnv: "FACEBOOK_CLIENT_ID",
     clientSecretEnv: "FACEBOOK_CLIENT_SECRET",
-    scope: "pages_show_list,pages_read_engagement,pages_manage_posts",
+    scope: "email",
     profileUrl: "https://graph.facebook.com/me?fields=id,name",
     profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
   },
