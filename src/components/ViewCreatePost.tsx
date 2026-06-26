@@ -98,7 +98,7 @@ export default function ViewCreatePost() {
   useEffect(() => {
     const token = localStorage.getItem("zyng_token");
     if (!token) return;
-    fetch("/api/auth/accounts", {
+    fetch("/api/oauth/accounts", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())

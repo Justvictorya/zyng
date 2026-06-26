@@ -74,7 +74,7 @@ export default function ViewSettings() {
       const token = localStorage.getItem("zyng_token");
       if (!token) return;
       try {
-        const res = await fetch("/api/auth/accounts", {
+        const res = await fetch("/api/oauth/accounts", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -320,7 +320,7 @@ export default function ViewSettings() {
     if (!token) return;
     setConnectingNetwork(networkId);
     try {
-      const res = await fetch(`/api/auth/${networkId}/connect`, {
+      const res = await fetch(`/api/oauth/${networkId}/connect`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -337,7 +337,7 @@ export default function ViewSettings() {
     const token = localStorage.getItem("zyng_token");
     if (!token) return;
     try {
-      const res = await fetch(`/api/auth/accounts/${networkId}`, {
+      const res = await fetch(`/api/oauth/accounts/${networkId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
