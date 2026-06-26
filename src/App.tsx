@@ -6,6 +6,8 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import AuthCallback from "./pages/AuthCallback";
+import PrivacyPage from "./pages/PrivacyPage";
+import DataDeletionPage from "./pages/DataDeletionPage";
 import DashboardLayout from "./pages/DashboardLayout";
 
 import ViewDashboard from "./components/ViewDashboard";
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/data-deletion" element={<DataDeletionPage />} />
 
         <Route
           path="/dashboard"
