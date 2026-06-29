@@ -128,6 +128,58 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
     const { platformUserId, platformUserName } = cfg.profileParser(profileData);
 
+    if (platform === "instagram") {
+      // For Instagram through Business app, also save the Facebook connection
+      // and try to find Instagram Business Account from user's pages
+      let igUserId = platformUserId;
+      let igUserName = platformUserName;
+
+      try {
+        const pagesRes = await fetch(
+          "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,instagram_business_account{id,username}",
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const pagesData = await pagesRes.json();
+        const page = pagesData.data?.[0];
+        if (page?.instagram_business_account) {
+          igUserId = page.instagram_business_account.id;
+          igUserName = page.instagram_business_account.username;
+        }
+      } catch (e) {
+        console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
+      }
+
+      const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
+        p_user_id: userId,
+        p_platform: "instagram",
+        p_platform_user_id: igUserId,
+        p_platform_user_name: igUserName,
+        p_access_token: accessToken,
+        p_token_expires_at: tokenData.expires_in
+          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+          : null,
+      });
+
+      if (upsertError) {
+        console.error("[OAuth] Instagram upsert error:", upsertError);
+        return res.redirect(`/?error=Failed to save Instagram connection`);
+      }
+
+      // Also save/update Facebook connection with the same token
+      await supabase.rpc("upsert_connected_account", {
+        p_user_id: userId,
+        p_platform: "facebook",
+        p_platform_user_id: platformUserId,
+        p_platform_user_name: platformUserName,
+        p_access_token: accessToken,
+        p_token_expires_at: tokenData.expires_in
+          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+          : null,
+      }).catch(() => {});
+
+      return res.redirect(`/settings?connected=instagram`);
+    }
+
     const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
       p_user_id: userId,
       p_platform: platform,

@@ -26,11 +26,11 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
   instagram: {
     authorizeUrl: "https://www.facebook.com/v22.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v22.0/oauth/access_token",
-    clientIdEnv: "INSTAGRAM_CLIENT_ID",
-    clientSecretEnv: "INSTAGRAM_CLIENT_SECRET",
+    clientIdEnv: "FACEBOOK_CLIENT_ID",
+    clientSecretEnv: "FACEBOOK_CLIENT_SECRET",
     scope: "instagram_basic,instagram_content_publish,pages_show_list,business_management,public_profile",
-    profileUrl: "https://graph.instagram.com/me?fields=id,username",
-    profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.username || data.name }),
+    profileUrl: "https://graph.facebook.com/me?fields=id,name",
+    profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
   },
   tiktok: {
     authorizeUrl: "https://www.tiktok.com/v2/auth/authorize",
