@@ -84,8 +84,12 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
   let parsedState: any = {};
   try {
-    parsedState = JSON.parse(decodeURIComponent(state as string));
-  } catch {
+    const decoded = decodeURIComponent(state as string);
+    console.log(`[OAuth] Raw state for ${platform}:`, state?.substring(0, 100));
+    console.log(`[OAuth] Decoded state for ${platform}:`, decoded.substring(0, 100));
+    parsedState = JSON.parse(decoded);
+  } catch (e) {
+    console.error(`[OAuth] State parse error for ${platform}:`, e);
     return res.redirect("/?error=Invalid OAuth state");
   }
 
