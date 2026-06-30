@@ -11,6 +11,9 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 app.set("trust proxy", 1);
 app.use(express.json());
 
+// Healthcheck — must be before HTTPS redirect (Railway checks via HTTP)
+app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+
 // HTTPS redirect for production behind Railway/reverse proxy
 app.use((req, res, next) => {
   const proto = req.headers["x-forwarded-proto"] || req.protocol;
@@ -72,9 +75,6 @@ app.use("/api/analytics", requireAuth, analyticsRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/profile", requireAuth, profileRoutes);
 app.use("/api/team", requireAuth, teamRoutes);
-
-// Healthcheck endpoint for Railway
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Debug endpoint to check OAuth env vars (no auth required, but only in dev)
 app.get("/api/debug/oauth-env", (_req, res) => {
