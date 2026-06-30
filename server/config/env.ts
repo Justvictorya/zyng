@@ -61,4 +61,4 @@ function env(key: string, fallback?: string): string {
   return (process.env[key] || fallback || "").replace(/\s/g, "");
 }
 
-export { validateEnv, env, ENV_SNAPSHOT, REQUIRED_VARS, OAUTH_VARS };
+export { validateEnv, env, REQUIRED_VARS, OAUTH_VARS };
