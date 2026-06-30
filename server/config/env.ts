@@ -33,6 +33,10 @@ const PAYSTACK_VARS = [
 function validateEnv() {
   const missing: string[] = [];
 
+  // Debug log for Twitter env vars
+  console.log("[Env] TWITTER_CLIENT_ID raw:", process.env.TWITTER_CLIENT_ID ? `set (${process.env.TWITTER_CLIENT_ID.substring(0, 4)}...)` : "NOT SET");
+  console.log("[Env] TWITTER_CLIENT_SECRET raw:", process.env.TWITTER_CLIENT_SECRET ? `set (${process.env.TWITTER_CLIENT_SECRET.substring(0, 4)}...)` : "NOT SET");
+
   for (const key of REQUIRED_VARS) {
     if (!process.env[key]) {
       missing.push(key);

@@ -33,7 +33,7 @@ app.use((req, res, next) => {
     origin === `http://${host}` ||
     origin === `http://localhost:${PORT}` ||
     origin === `http://localhost:5173` ||
-    process.env.NODE_ENV !== "production"; // trigger redeploy
+    process.env.NODE_ENV !== "production";
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", allowed ? origin : "null");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
