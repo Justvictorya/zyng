@@ -59,11 +59,11 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   const cfg = OAUTH_CONFIG[platform];
   if (!cfg) return res.status(404).send("Unknown platform");
 
-  if (oauthError) {
-    return res.redirect(`/settings?error=${platform} authorization was denied`);
+    if (oauthError) {
+    return res.redirect(`/dashboard/settings?error=${platform} authorization was denied`);
   }
 
-  if (!code) return res.redirect("/settings?error=No authorization code received");
+  if (!code) return res.redirect("/dashboard/settings?error=No authorization code received");
 
   let parsedState: any = {};
   try {
@@ -177,7 +177,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
           : null,
       }).catch(() => {});
 
-      return res.redirect(`/settings?connected=instagram`);
+      return res.redirect(`/dashboard/settings?connected=instagram`);
     }
 
     const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
@@ -196,7 +196,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/?error=Failed to save ${platform} connection`);
     }
 
-    res.redirect(`/settings?connected=${platform}`);
+    res.redirect(`/dashboard/settings?connected=${platform}`);
   } catch (err: any) {
     console.error(`[OAuth] Callback error for ${platform}:`, err.message);
     res.redirect("/?error=OAuth connection failed");
