@@ -104,12 +104,15 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   const redirectUri = oauthRedirectUri(req, platform);
 
   const tokenBody: Record<string, string> = {
-    client_id: clientId!,
-    client_secret: clientSecret,
     code: code as string,
     redirect_uri: redirectUri,
     grant_type: "authorization_code",
   };
+
+  if (!cfg.needsBasicAuth) {
+    tokenBody.client_id = clientId!;
+    tokenBody.client_secret = clientSecret;
+  }
 
   if (cfg.useClientKey) {
     tokenBody.client_key = clientId!;
@@ -120,10 +123,16 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     tokenBody.code_verifier = codeVerifier;
   }
 
+  const tokenHeaders: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
+  if (cfg.needsBasicAuth) {
+    const encoded = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+    tokenHeaders["Authorization"] = `Basic ${encoded}`;
+  }
+
   try {
     const tokenRes = await fetch(cfg.tokenUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: tokenHeaders,
       body: new URLSearchParams(tokenBody),
     });
 

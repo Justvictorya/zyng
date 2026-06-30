@@ -9,6 +9,7 @@ interface OAuthPlatform {
   profileUrl: string;
   profileParser: (data: any) => { platformUserId: string; platformUserName: string };
   needsPkce?: boolean;
+  needsBasicAuth?: boolean;
   useClientKey?: boolean;
   extraAuthorizeParams?: string;
 }
@@ -52,6 +53,7 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     profileUrl: "https://api.twitter.com/2/users/me",
     profileParser: (data: any) => ({ platformUserId: data.data?.id, platformUserName: data.data?.name }),
     needsPkce: true,
+    needsBasicAuth: true,
   },
   linkedin: {
     authorizeUrl: "https://www.linkedin.com/oauth/v2/authorization",
