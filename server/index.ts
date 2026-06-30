@@ -73,6 +73,11 @@ app.use("/api/payments", paymentsRoutes);
 app.use("/api/profile", requireAuth, profileRoutes);
 app.use("/api/team", requireAuth, teamRoutes);
 
+// TikTok domain verification
+app.use("/tiktokHcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT.txt", (_req, res) => {
+  res.type("text/plain").send("tiktok-developers-site-verification=HcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT");
+});
+
 import { startScheduler } from "./lib/scheduler";
 
 async function startServer() {
