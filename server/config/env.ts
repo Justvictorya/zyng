@@ -1,6 +1,14 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+// Snapshot env vars at load time (Railway may alter process.env later)
+export const ENV_SNAPSHOT: Record<string, string> = {};
+function capture(key: string) {
+  ENV_SNAPSHOT[key] = process.env[key] || "";
+}
+capture("TWITTER_CLIENT_ID");
+capture("TWITTER_CLIENT_SECRET");
+
 const REQUIRED_VARS = [
   "SUPABASE_URL",
   "SUPABASE_ANON_KEY",
@@ -33,9 +41,9 @@ const PAYSTACK_VARS = [
 function validateEnv() {
   const missing: string[] = [];
 
-  // Debug log for Twitter env vars
-  console.log("[Env] TWITTER_CLIENT_ID raw:", process.env.TWITTER_CLIENT_ID ? `set (${process.env.TWITTER_CLIENT_ID.substring(0, 4)}...)` : "NOT SET");
-  console.log("[Env] TWITTER_CLIENT_SECRET raw:", process.env.TWITTER_CLIENT_SECRET ? `set (${process.env.TWITTER_CLIENT_SECRET.substring(0, 4)}...)` : "NOT SET");
+  // Debug log for Twitter env vars (from snapshot)
+  console.log("[Env] TWITTER_CLIENT_ID raw:", ENV_SNAPSHOT.TWITTER_CLIENT_ID ? `set (${ENV_SNAPSHOT.TWITTER_CLIENT_ID.substring(0, 4)}...)` : "NOT SET");
+  console.log("[Env] TWITTER_CLIENT_SECRET raw:", ENV_SNAPSHOT.TWITTER_CLIENT_SECRET ? `set (${ENV_SNAPSHOT.TWITTER_CLIENT_SECRET.substring(0, 4)}...)` : "NOT SET");
 
   for (const key of REQUIRED_VARS) {
     if (!process.env[key]) {
