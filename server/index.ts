@@ -73,6 +73,9 @@ app.use("/api/payments", paymentsRoutes);
 app.use("/api/profile", requireAuth, profileRoutes);
 app.use("/api/team", requireAuth, teamRoutes);
 
+// Healthcheck endpoint for Railway
+app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+
 // Debug endpoint to check OAuth env vars (no auth required, but only in dev)
 app.get("/api/debug/oauth-env", (_req, res) => {
   const vars = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET", "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_SECRET", "FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"];
