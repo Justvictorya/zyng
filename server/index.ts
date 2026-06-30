@@ -86,6 +86,16 @@ app.get("/api/debug/oauth-env", (_req, res) => {
   res.json(status);
 });
 
+// Direct env test - no caching, no auth
+app.get("/api/debug/env-raw", (_req, res) => {
+  res.json({
+    TWITTER_CLIENT_ID: process.env.TWITTER_CLIENT_ID ? process.env.TWITTER_CLIENT_ID.substring(0, 8) + "..." : "missing",
+    TWITTER_CLIENT_SECRET: process.env.TWITTER_CLIENT_SECRET ? process.env.TWITTER_CLIENT_SECRET.substring(0, 8) + "..." : "missing",
+    TIKTOK_CLIENT_ID: process.env.TIKTOK_CLIENT_ID ? process.env.TIKTOK_CLIENT_ID.substring(0, 8) + "..." : "missing",
+    NODE_ENV: process.env.NODE_ENV,
+  });
+});
+
 // TikTok domain verification
 app.use("/tiktokHcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT.txt", (_req, res) => {
   res.type("text/plain").send("tiktok-developers-site-verification=HcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT");
