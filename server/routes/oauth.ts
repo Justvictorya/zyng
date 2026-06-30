@@ -1,9 +1,7 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { supabase, serviceDb } from "../lib/supabase";
-import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId } from "../config/oauth";
-import { requireAuth } from "../middleware/auth";
-import { env } from "../config/env";
+import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId, getOauthClientSecret } from "../config/oauth";
 
 const router = Router();
 
@@ -99,7 +97,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   const codeVerifier = pending.code_verifier;
 
   const clientId = getOauthClientId(platform);
-  const clientSecret = env(cfg.clientSecretEnv);
+  const clientSecret = getOauthClientSecret(platform);
   const redirectUri = oauthRedirectUri(req, platform);
 
   const tokenBody: Record<string, string> = {

@@ -41,10 +41,6 @@ const PAYSTACK_VARS = [
 function validateEnv() {
   const missing: string[] = [];
 
-  // Debug log for Twitter env vars (from snapshot)
-  console.log("[Env] TWITTER_CLIENT_ID raw:", ENV_SNAPSHOT.TWITTER_CLIENT_ID ? `set (${ENV_SNAPSHOT.TWITTER_CLIENT_ID.substring(0, 4)}...)` : "NOT SET");
-  console.log("[Env] TWITTER_CLIENT_SECRET raw:", ENV_SNAPSHOT.TWITTER_CLIENT_SECRET ? `set (${ENV_SNAPSHOT.TWITTER_CLIENT_SECRET.substring(0, 4)}...)` : "NOT SET");
-
   for (const key of REQUIRED_VARS) {
     if (!process.env[key]) {
       missing.push(key);
@@ -65,4 +61,4 @@ function env(key: string, fallback?: string): string {
   return (process.env[key] || fallback || "").replace(/\s/g, "");
 }
 
-export { validateEnv, env, REQUIRED_VARS, OAUTH_VARS };
+export { validateEnv, env, ENV_SNAPSHOT, REQUIRED_VARS, OAUTH_VARS };
