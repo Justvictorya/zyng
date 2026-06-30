@@ -73,6 +73,16 @@ app.use("/api/payments", paymentsRoutes);
 app.use("/api/profile", requireAuth, profileRoutes);
 app.use("/api/team", requireAuth, teamRoutes);
 
+// Debug endpoint to check OAuth env vars (no auth required, but only in dev)
+app.get("/api/debug/oauth-env", (_req, res) => {
+  const vars = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET", "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_SECRET", "FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"];
+  const status: Record<string, string> = {};
+  for (const v of vars) {
+    status[v] = process.env[v] ? `set (${process.env[v]!.substring(0, 4)}...)` : "NOT SET";
+  }
+  res.json(status);
+});
+
 // TikTok domain verification
 app.use("/tiktokHcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT.txt", (_req, res) => {
   res.type("text/plain").send("tiktok-developers-site-verification=HcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT");

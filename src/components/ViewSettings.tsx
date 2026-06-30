@@ -323,12 +323,19 @@ export default function ViewSettings() {
       const res = await fetch(`/api/oauth/${networkId}/connect`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { data = { success: false, error: text.substring(0, 200) }; }
       if (data.success && data.url) {
         window.location.href = data.url;
+      } else {
+        console.error("OAuth connect failed:", data);
+        showToast(data.error || `Failed to connect to ${networkId}`, "error");
+        setConnectingNetwork(null);
       }
     } catch (e) {
       console.error("Failed to start OAuth", e);
+      showToast(`Connection error: ${(e as any)?.message || e}`, "error");
       setConnectingNetwork(null);
     }
   };
