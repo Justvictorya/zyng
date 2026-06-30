@@ -1,13 +1,32 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
-import { supabase } from "../lib/supabase";
+import { supabase, serviceDb } from "../lib/supabase";
 import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId } from "../config/oauth";
 import { requireAuth } from "../middleware/auth";
 import { env } from "../config/env";
 
 const router = Router();
 
-const pendingStates = new Map<string, { userId: string; csrf: string; codeVerifier?: string }>();
+async function saveOAuthState(stateId: string, userId: string, csrf: string, codeVerifier?: string) {
+  await serviceDb.from("oauth_states").insert({
+    state_id: stateId,
+    user_id: userId,
+    csrf,
+    code_verifier: codeVerifier || null,
+  }).then(() => {
+    setTimeout(async () => {
+      await serviceDb.from("oauth_states").delete().eq("state_id", stateId);
+    }, 10 * 60 * 1000);
+  });
+}
+
+async function getOAuthState(stateId: string) {
+  const { data } = await serviceDb.from("oauth_states").select("*").eq("state_id", stateId).single();
+  if (data) {
+    await serviceDb.from("oauth_states").delete().eq("state_id", stateId);
+  }
+  return data;
+}
 
 router.get("/:platform/connect", requireAuth, async (req: Request, res: Response) => {
   const { platform } = req.params;
@@ -31,8 +50,7 @@ router.get("/:platform/connect", requireAuth, async (req: Request, res: Response
 
   const stateId = crypto.randomUUID();
   const csrf = crypto.randomBytes(16).toString("hex");
-  pendingStates.set(stateId, { userId, csrf, codeVerifier });
-  setTimeout(() => pendingStates.delete(stateId), 10 * 60 * 1000);
+  await saveOAuthState(stateId, userId, csrf, codeVerifier);
 
   const stateData: any = { stateId, csrf };
   const state = JSON.stringify(stateData);
@@ -72,14 +90,13 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     return res.redirect("/?error=Invalid OAuth state");
   }
 
-  const pending = pendingStates.get(parsedState.stateId);
+  const pending = await getOAuthState(parsedState.stateId);
   if (!pending || pending.csrf !== parsedState.csrf) {
     return res.redirect("/?error=OAuth session expired or invalid");
   }
 
-  const userId = pending.userId;
-  const codeVerifier = pending.codeVerifier;
-  pendingStates.delete(parsedState.stateId);
+  const userId = pending.user_id;
+  const codeVerifier = pending.code_verifier;
 
   const clientId = getOauthClientId(platform);
   const clientSecret = env(cfg.clientSecretEnv);
