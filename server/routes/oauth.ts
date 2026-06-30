@@ -51,8 +51,7 @@ router.get("/:platform/connect", requireAuth, async (req: Request, res: Response
   const csrf = crypto.randomBytes(16).toString("hex");
   await saveOAuthState(stateId, userId, csrf, codeVerifier);
 
-  const stateData: any = { stateId, csrf };
-  const state = JSON.stringify(stateData);
+  const state = `${stateId}:${csrf}`;
   const redirectUri = oauthRedirectUri(req, platform);
   const clientIdParam = cfg.useClientKey ? "client_key" : "client_id";
 
@@ -82,14 +81,13 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
   if (!code) return res.redirect("/dashboard/settings?error=No authorization code received");
 
-  let parsedState: any = {};
+  let parsedState: { stateId: string; csrf: string } | null = null;
   try {
-    const decoded = decodeURIComponent(state as string);
-    console.log(`[OAuth] Raw state for ${platform}:`, state?.substring(0, 100));
-    console.log(`[OAuth] Decoded state for ${platform}:`, decoded.substring(0, 100));
-    parsedState = JSON.parse(decoded);
+    const raw = state as string;
+    const sep = raw.indexOf(":");
+    parsedState = { stateId: raw.substring(0, sep), csrf: raw.substring(sep + 1) };
   } catch (e) {
-    console.error(`[OAuth] State parse error for ${platform}:`, e);
+    console.error(`[OAuth] State parse error for ${platform}:`, e, "state:", state);
     return res.redirect("/?error=Invalid OAuth state");
   }
 
