@@ -50,7 +50,8 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     clientSecretEnv: "TWITTER_CLIENT_SECRET",
     scope: "tweet.read tweet.write users.read offline.access",
     profileUrl: "https://api.twitter.com/2/users/me",
-    profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
+    profileParser: (data: any) => ({ platformUserId: data.data?.id, platformUserName: data.data?.name }),
+    needsPkce: true,
   },
   linkedin: {
     authorizeUrl: "https://www.linkedin.com/oauth/v2/authorization",
