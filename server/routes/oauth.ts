@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { supabase, serviceDb } from "../lib/supabase";
+import { requireAuth } from "../middleware/auth";
 import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId, getOauthClientSecret } from "../config/oauth";
 
 const router = Router();
