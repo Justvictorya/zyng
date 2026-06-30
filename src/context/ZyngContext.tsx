@@ -18,18 +18,42 @@ function isTokenExpired(token: string): boolean {
 
 async function ensureValidToken(): Promise<string | null> {
   const token = localStorage.getItem("zyng_token");
+  const refreshToken = localStorage.getItem("zyng_refresh_token");
   if (!token) return null;
   if (!isTokenExpired(token)) return token;
 
-  // Token expired — try Supabase session refresh
-  const { data, error } = await supabase.auth.refreshSession();
-  if (error || !data.session) {
-    localStorage.removeItem("zyng_token");
-    localStorage.removeItem("zyng_user");
-    return null;
+  // Token expired — try refreshing via Supabase auth endpoint
+  if (refreshToken) {
+    try {
+      const res = await fetch(
+        "https://sdiqdtzslfubtgbwpmjp.supabase.co/auth/v1/token?grant_type=refresh_token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey:
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkaXFkdHpzbGZ1YnRnYndwbWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzYwNTQsImV4cCI6MjA5NDQ1MjA1NH0.SFyW0dWd9ftwHOpXQ8tbzm9GS64cieFK3rgssvjJEQo",
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        }
+      );
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem("zyng_token", data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem("zyng_refresh_token", data.refresh_token);
+        }
+        return data.access_token;
+      }
+    } catch (e) {
+      console.warn("Token refresh failed", e);
+    }
   }
-  localStorage.setItem("zyng_token", data.session.access_token);
-  return data.session.access_token;
+
+  localStorage.removeItem("zyng_token");
+  localStorage.removeItem("zyng_refresh_token");
+  localStorage.removeItem("zyng_user");
+  return null;
 }
 
 interface ZyngContextValue {
@@ -109,6 +133,7 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(null);
     localStorage.removeItem("zyng_user");
     localStorage.removeItem("zyng_token");
+    localStorage.removeItem("zyng_refresh_token");
   };
 
   const handlePostDeleted = (id: string) => {

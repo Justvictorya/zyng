@@ -49,6 +49,9 @@ export default function SignupPage() {
         if (data.session?.access_token) {
           localStorage.setItem("zyng_token", data.session.access_token);
         }
+        if (data.session?.refresh_token) {
+          localStorage.setItem("zyng_refresh_token", data.session.refresh_token);
+        }
 
         setTimeout(() => {
           setSuccess(false);
