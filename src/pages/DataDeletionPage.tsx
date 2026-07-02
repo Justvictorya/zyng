@@ -25,7 +25,7 @@ export default function DataDeletionPage() {
 
         <h3 className="text-md font-semibold text-slate-100 pt-3">Option 2: Email</h3>
         <p className="text-sm text-slate-300">
-          Send an email to <span className="text-indigo-400">victoriajohn0309@gmail.com</span> with the subject "Data Deletion Request" from the email address associated with your Zyng account.
+          Send an email to <span className="text-indigo-400">support@zyngapp.com</span> with the subject "Data Deletion Request" from the email address associated with your Zyng account.
         </p>
 
         <h2 className="text-lg font-semibold text-white pt-4">What Gets Deleted</h2>
@@ -44,7 +44,7 @@ export default function DataDeletionPage() {
 
         <h2 className="text-lg font-semibold text-white pt-4">Contact</h2>
         <p className="text-sm text-slate-300">
-          For questions: victoriajohn0309@gmail.com
+          For questions: support@zyngapp.com
         </p>
       </div>
     </div>

@@ -50,12 +50,12 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold text-white pt-4">5. Your Rights</h2>
         <p className="text-sm text-slate-300">
-          You may request access to, correction of, or deletion of your personal data by contacting us at victoriajohn0309@gmail.com.
+          You may request access to, correction of, or deletion of your personal data by contacting us at support@zyngapp.com.
         </p>
 
         <h2 className="text-lg font-semibold text-white pt-4">6. Contact</h2>
         <p className="text-sm text-slate-300">
-          For privacy inquiries: victoriajohn0309@gmail.com
+          For privacy inquiries: support@zyngapp.com
         </p>
       </div>
     </div>
