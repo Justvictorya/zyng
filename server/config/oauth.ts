@@ -94,18 +94,11 @@ export function oauthRedirectUri(req: any, platform: string): string {
 export function getOauthClientId(platform: string): string | null {
   const cfg = OAUTH_CONFIG[platform];
   if (!cfg) return null;
-  const val = env(cfg.clientIdEnv);
-  if (val) return val;
-  // Fallback for Railway env var bug — Twitter vars not reliably passed to container
-  if (platform === "twitter") return "WDQ1NDdFTGdMSnpOOV9HdnJRRzM6MTpjaQ";
-  return null;
+  return env(cfg.clientIdEnv) || null;
 }
 
 export function getOauthClientSecret(platform: string): string {
   const cfg = OAUTH_CONFIG[platform];
   if (!cfg) return "";
-  const val = env(cfg.clientSecretEnv);
-  if (val) return val;
-  if (platform === "twitter") return "Fgs-Lcyx3OB0zxw5amvlOfeexNjkLskqWx9Wf4p4WeZp2JkJl7";
-  return "";
+  return env(cfg.clientSecretEnv) || "";
 }

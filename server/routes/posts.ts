@@ -237,7 +237,9 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
         .from("posts")
         .update({ schedule_time: "2099-01-01T00:00:00Z" })
         .eq("id", post.id);
-    } catch {}
+    } catch (e) {
+      console.error(`[Posts] Failed to mark post ${post.id} as processed:`, e);
+    }
 
     return res.json({ success: true, results });
   } catch (err: any) {

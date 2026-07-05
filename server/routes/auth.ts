@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { supabase, adminAuth } from "../lib/supabase";
 import { signupSchema, loginSchema } from "../middleware/validate";
 import { env } from "../config/env";
+import { OAUTH_CONFIG, getOauthClientId, getOauthClientSecret } from "../config/oauth";
 import rateLimit from "express-rate-limit";
 
 const router = Router();
@@ -162,47 +163,81 @@ router.post("/oauth-login", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/tiktok-login", async (req: Request, res: Response) => {
-  const { code } = req.body;
+router.post("/social-login/:platform", async (req: Request, res: Response) => {
+  const { platform } = req.params;
+  const { code, code_verifier } = req.body;
   if (!code) return res.status(400).json({ success: false, error: "Code required" });
 
-  const clientKey = env("TIKTOK_CLIENT_ID");
-  const clientSecret = env("TIKTOK_CLIENT_SECRET");
-  if (!clientKey || !clientSecret) {
-    return res.status(500).json({ success: false, error: "TikTok OAuth not configured" });
-  }
+  const cfg = OAUTH_CONFIG[platform];
+  if (!cfg) return res.status(400).json({ success: false, error: `Unknown platform: ${platform}` });
+
+  const clientId = getOauthClientId(platform);
+  const clientSecret = getOauthClientSecret(platform);
+  if (!clientId) return res.status(500).json({ success: false, error: `${platform} OAuth not configured` });
 
   try {
-    const tokenRes = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_key: clientKey,
-        client_secret: clientSecret,
-        code,
-        grant_type: "authorization_code",
-        redirect_uri: `${req.protocol}://${req.get("host")}/auth/callback?provider=tiktok`,
-      }),
-    });
+    const redirectUri = `${req.protocol}://${req.get("host")}/auth/callback?provider=${platform}`;
 
+    const tokenBody: Record<string, string> = {
+      code,
+      grant_type: "authorization_code",
+      redirect_uri: redirectUri,
+    };
+    if (cfg.needsBasicAuth) {
+      tokenBody.client_id = clientId;
+    } else if (cfg.useClientKey) {
+      tokenBody.client_key = clientId;
+      tokenBody.client_secret = clientSecret;
+    } else {
+      tokenBody.client_id = clientId;
+      tokenBody.client_secret = clientSecret;
+    }
+
+    if (code_verifier) {
+      tokenBody.code_verifier = code_verifier;
+    }
+
+    const tokenHeaders: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
+    if (cfg.needsBasicAuth) {
+      tokenHeaders["Authorization"] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
+    }
+
+    const tokenRes = await fetch(cfg.tokenUrl, {
+      method: "POST",
+      headers: tokenHeaders,
+      body: new URLSearchParams(tokenBody),
+    });
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
       return res.status(400).json({ success: false, error: tokenData.error || "Failed to get access token" });
     }
 
-    const profileRes = await fetch(
-      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url",
-      { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
-    );
+    const profileRes = await fetch(cfg.profileUrl, {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
     const profileData = await profileRes.json();
-    const tikTokUser = profileData.data?.user;
-    if (!tikTokUser) {
-      return res.status(400).json({ success: false, error: "Failed to get TikTok user info" });
-    }
+    const { platformUserId, platformUserName } = cfg.profileParser(profileData);
 
-    const email = `tiktok_${tikTokUser.open_id}@zyng.app`;
-    const name = tikTokUser.display_name || "TikTok User";
-    const avatar = tikTokUser.avatar_url || "";
+    let email: string;
+    let name: string;
+    let avatar: string;
+
+    switch (platform) {
+      case "linkedin":
+        email = profileData.email || `linkedin_${platformUserId}@zyng.app`;
+        name = platformUserName || "LinkedIn User";
+        avatar = profileData.picture || "";
+        break;
+      case "tiktok":
+        email = `tiktok_${platformUserId}@zyng.app`;
+        name = platformUserName || "TikTok User";
+        avatar = profileData.data?.user?.avatar_url || "";
+        break;
+      default:
+        email = `social_${platform}_${platformUserId}@zyng.app`;
+        name = platformUserName || "User";
+        avatar = "";
+    }
 
     const { data: users } = await adminAuth.listUsers();
     const existing = users.users.find((u: any) => u.email === email);
@@ -232,7 +267,6 @@ router.post("/tiktok-login", async (req: Request, res: Response) => {
       user_metadata: { full_name: name },
       email_confirm: true,
     });
-
     if (error) return res.status(400).json({ success: false, error: error.message });
 
     const user = {

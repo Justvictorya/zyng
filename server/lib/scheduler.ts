@@ -81,7 +81,7 @@ async function checkDuePosts() {
 
         const platformCaptions: Record<string, string> | undefined = parseField(post.platform_captions) || undefined;
 
-        console.log(`[Scheduler] Publishing post ${post.id} to [${toPublish.join(",")}]`);
+        console.debug(`[Scheduler] Publishing post ${post.id}`);
 
         const results = await publishPost(
           post.id, post.user_id, post.caption || "",
@@ -112,10 +112,10 @@ async function checkDuePosts() {
               .from("posts")
               .update({ publish_results: JSON.stringify(updatedResults) })
               .eq("id", post.id);
-          } catch {}
+          } catch (e: any) { console.error(`[Scheduler] Persist error for post ${post.id}:`, e?.message); }
         }
 
-        console.log(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
+        console.debug(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
       } catch (err: any) {
         console.error(`[Scheduler] Post ${post.id} failed:`, err.message);
       }

@@ -151,7 +151,9 @@ async function refreshToken(platform: string, account: any): Promise<string | nu
         .eq("id", account.id);
       return data.access_token;
     }
-  } catch {}
+  } catch (e) {
+    console.warn(`[Publisher] Token refresh failed for ${platform}:`, e);
+  }
   return null;
 }
 

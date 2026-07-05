@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { UserProfile, Post, DialectType } from "../types";
-import { supabase } from "../lib/supabase-client";
 
 function decodeJwt(token: string): any {
   try {
@@ -25,14 +24,14 @@ async function ensureValidToken(): Promise<string | null> {
   // Token expired — try refreshing via Supabase auth endpoint
   if (refreshToken) {
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const res = await fetch(
-        "https://sdiqdtzslfubtgbwpmjp.supabase.co/auth/v1/token?grant_type=refresh_token",
+        `${supabaseUrl}/auth/v1/token?grant_type=refresh_token`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey:
-              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkaXFkdHpzbGZ1YnRnYndwbWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzYwNTQsImV4cCI6MjA5NDQ1MjA1NH0.SFyW0dWd9ftwHOpXQ8tbzm9GS64cieFK3rgssvjJEQo",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         }

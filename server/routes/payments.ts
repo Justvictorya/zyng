@@ -38,7 +38,7 @@ router.post("/initialize", async (req: Request, res: Response) => {
       return res.status(200).json({
         success: true,
         test_mode: true,
-        public_key: "pk_test_placeholder",
+        public_key: "pk_test_unconfigured",
         plan: planConfig.label,
         message: "Paystack not configured — running in test mode. Set PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY in .env to enable real payments.",
       });

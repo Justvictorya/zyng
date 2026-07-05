@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabase-client";
 import { useZyng } from "../context/ZyngContext";
 import { Loader2 } from "lucide-react";
 
+const CUSTOM_OAUTH_PROVIDERS = ["tiktok", "linkedin", "twitter"];
+
 export default function AuthCallback() {
   const { setCurrentUser } = useZyng();
   const navigate = useNavigate();
@@ -13,20 +15,20 @@ export default function AuthCallback() {
   useEffect(() => {
     const provider = searchParams.get("provider");
 
-    if (provider === "tiktok") {
-      handleTikTokLogin();
+    if (provider && CUSTOM_OAUTH_PROVIDERS.includes(provider)) {
+      handleSocialLogin(provider);
     } else {
       handleSupabaseCallback();
     }
   }, []);
 
-  async function handleTikTokLogin() {
+  async function handleSocialLogin(platform: string) {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
-    const savedState = localStorage.getItem("tiktok_login_state");
+    const savedState = localStorage.getItem(`${platform}_login_state`);
 
     if (!code) {
-      setError("No authorization code received from TikTok.");
+      setError("No authorization code received.");
       return;
     }
 
@@ -35,13 +37,15 @@ export default function AuthCallback() {
       return;
     }
 
-    localStorage.removeItem("tiktok_login_state");
+    localStorage.removeItem(`${platform}_login_state`);
+    const codeVerifier = localStorage.getItem(`${platform}_code_verifier`) || undefined;
+    localStorage.removeItem(`${platform}_code_verifier`);
 
     try {
-      const res = await fetch("/api/auth/tiktok-login", {
+      const res = await fetch(`/api/auth/social-login/${platform}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, code_verifier: codeVerifier }),
       });
 
       const data = await res.json();
@@ -56,7 +60,7 @@ export default function AuthCallback() {
         }
         navigate("/dashboard", { replace: true });
       } else {
-        setError(data.error || "TikTok login failed");
+        setError(data.error || `${platform} login failed`);
       }
     } catch {
       setError("Failed to connect to authentication server.");

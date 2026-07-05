@@ -72,7 +72,8 @@ const PLATFORM_COLORS: Record<string, string> = {
   whatsapp: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
 };
 
-function BotDetailRow({ entry }: { entry: BotPostEntry }) {
+function BotDetailRow(props: { entry: BotPostEntry; key?: string }) {
+  const { entry } = props;
   const statusIcon = {
     published: <CheckCircle2 className="h-3 w-3 text-emerald-400" />,
     failed: <XCircle className="h-3 w-3 text-rose-400" />,
@@ -255,7 +256,7 @@ export default function ViewAnalytics() {
           </div>
           <div className="space-y-3">
             {stats?.botStats && Object.keys(stats.botStats).length > 0 ? (
-              Object.entries(stats.botStats).map(([platform, data]) => {
+              Object.entries(stats.botStats).map(([platform, data]: [string, BotStatsEntry]) => {
                 const Icon = PLATFORM_ICONS[platform] || Activity;
                 const colorClass = PLATFORM_COLORS[platform] || "text-slate-400 bg-slate-500/10 border-slate-500/25";
                 const total = data.totalTargeted;

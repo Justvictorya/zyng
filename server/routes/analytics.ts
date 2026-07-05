@@ -14,7 +14,7 @@ function isPublished(post: any): boolean {
   return false;
 }
 
-function parseResults(raw: any): { platform: string; success: boolean }[] {
+function parseResults(raw: any): { platform: string; success: boolean; error?: string }[] {
   try {
     const pr = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (Array.isArray(pr)) return pr;

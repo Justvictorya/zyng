@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Clock, ShieldAlert, Zap, Layers, PenSquare, History, BarChart2, Settings, HelpCircle } from "lucide-react";
+import { Clock, Zap, Layers, PenSquare, History, BarChart2, Settings } from "lucide-react";
 import { translations } from "../lib/translations";
 import { useZyng } from "../context/ZyngContext";
 

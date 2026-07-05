@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { env } from "../config/env";
 
-const apiKey = env("GEMINI_API_KEY", "dummy-key");
+const apiKey = env("GEMINI_API_KEY");
 
 export const ai = new GoogleGenAI({
   apiKey,

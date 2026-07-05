@@ -498,7 +498,7 @@ export default function ViewCreatePost() {
         schedule_time: scheduleTime || new Date(Date.now() + 3600000).toISOString(),
       };
       const customCaptions = Object.fromEntries(
-        Object.entries(platformCaptions).filter(([_, v]) => v.trim())
+        Object.entries(platformCaptions).filter(([, v]: [string, string]) => v.trim())
       );
       if (Object.keys(customCaptions).length > 0) body.platform_captions = customCaptions;
 

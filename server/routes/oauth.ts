@@ -137,7 +137,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     });
 
     const tokenText = await tokenRes.text();
-    console.log(`[OAuth] Token response for ${platform} (${tokenRes.status}):`, tokenText.substring(0, 200));
+    if (tokenRes.status >= 400) console.error(`[OAuth] Token error for ${platform}: ${tokenRes.status}`);
 
     let tokenData: any;
     try {
@@ -157,7 +157,6 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     });
 
     const profileData = await profileRes.json();
-    console.log(`[OAuth] Profile response for ${platform}:`, JSON.stringify(profileData).substring(0, 200));
 
     const { platformUserId, platformUserName } = cfg.profileParser(profileData);
 
@@ -200,17 +199,22 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       }
 
       // Also save/update Facebook connection with the same token
-      await supabase.rpc("upsert_connected_account", {
-        p_user_id: userId,
-        p_platform: "facebook",
-        p_platform_user_id: platformUserId,
-        p_platform_user_name: platformUserName,
-        p_access_token: accessToken,
-        p_token_expires_at: tokenData.expires_in
-          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-          : null,
-        p_refresh_token: tokenData.refresh_token || null,
-      }).catch(() => {});
+      try {
+        const { error: fbErr } = await supabase.rpc("upsert_connected_account", {
+          p_user_id: userId,
+          p_platform: "facebook",
+          p_platform_user_id: platformUserId,
+          p_platform_user_name: platformUserName,
+          p_access_token: accessToken,
+          p_token_expires_at: tokenData.expires_in
+            ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+            : null,
+          p_refresh_token: tokenData.refresh_token || null,
+        });
+        if (fbErr) console.warn("[OAuth] Facebook upsert failed:", fbErr);
+      } catch (e) {
+        console.warn("[OAuth] Facebook upsert failed:", e);
+      }
 
       return res.redirect(`/dashboard/settings?connected=instagram`);
     }
