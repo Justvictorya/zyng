@@ -60,7 +60,7 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
     clientIdEnv: "LINKEDIN_CLIENT_ID",
     clientSecretEnv: "LINKEDIN_CLIENT_SECRET",
-    scope: "w_member_social,openid,profile",
+    scope: "w_member_social,openid,profile,email",
     profileUrl: "https://api.linkedin.com/v2/userinfo",
     profileParser: (data: any) => ({ platformUserId: data.sub, platformUserName: data.name }),
   },
