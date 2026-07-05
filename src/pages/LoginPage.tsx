@@ -83,7 +83,10 @@ export default function LoginPage() {
 
     if (p.id === "tiktok") {
       const clientId = import.meta.env.VITE_TIKTOK_CLIENT_ID;
-      window.location.href = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientId}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${csrfState}`;
+      const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      localStorage.setItem("tiktok_code_verifier", codeVerifier);
+      window.location.href = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientId}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     } else if (p.id === "linkedin") {
       const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;
       window.location.href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile%20email&state=${csrfState}`;
