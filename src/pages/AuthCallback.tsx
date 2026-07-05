@@ -13,7 +13,12 @@ export default function AuthCallback() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const provider = searchParams.get("provider");
+    let provider = searchParams.get("provider");
+
+    if (!provider) {
+      provider = localStorage.getItem("current_oauth_provider");
+      localStorage.removeItem("current_oauth_provider");
+    }
 
     if (provider && CUSTOM_OAUTH_PROVIDERS.includes(provider)) {
       handleSocialLogin(provider);

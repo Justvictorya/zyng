@@ -141,7 +141,7 @@ export default function SignupPage() {
               onClick={async () => {
                 const csrfState = Math.random().toString(36).substring(2);
                 localStorage.setItem(`${p.id}_login_state`, csrfState);
-                const redirectUri = `${window.location.origin}/auth/callback?provider=${p.id}`;
+                localStorage.setItem("current_oauth_provider", p.id);
                 if (p.id === "tiktok") {
                   const clientId = import.meta.env.VITE_TIKTOK_CLIENT_ID;
                   const codeVerifier2 = crypto.randomUUID() + crypto.randomUUID();
@@ -149,12 +149,15 @@ export default function SignupPage() {
                   const digest2 = await crypto.subtle.digest("SHA-256", data2);
                   const challenge2 = btoa(String.fromCharCode(...new Uint8Array(digest2))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
                   localStorage.setItem("tiktok_code_verifier", codeVerifier2);
+                  const redirectUri = `${window.location.origin}/auth/callback`;
                   window.location.href = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientId}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${csrfState}&code_challenge=${challenge2}&code_challenge_method=S256`;
                 } else if (p.id === "linkedin") {
                   const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;
+                  const redirectUri = `${window.location.origin}/auth/callback?provider=linkedin`;
                   window.location.href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid%20profile%20email&state=${csrfState}`;
                 } else if (p.id === "twitter") {
                   const clientId = import.meta.env.VITE_TWITTER_CLIENT_ID;
+                  const redirectUri = `${window.location.origin}/auth/callback?provider=twitter`;
                   const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
                   const verifierData = new TextEncoder().encode(codeVerifier);
                   const verifierDigest = await crypto.subtle.digest("SHA-256", verifierData);
