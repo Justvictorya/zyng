@@ -25,6 +25,11 @@ export default function ViewPostsHistory() {
   const { dialect, posts, isPostsLoading: isLoading, handlePostDeleted: onPostDeleted, handlePostUpdated: onPostUpdated, loadPosts: triggerRefresh } = useZyng();
   const t = translations[dialect];
 
+  function authHeaders(): Record<string, string> {
+    const token = localStorage.getItem("zyng_token");
+    return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
+  }
+
   // Inline editing states
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState("");
@@ -51,7 +56,7 @@ export default function ViewPostsHistory() {
     try {
       const res = await fetch(`/api/posts/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ caption: editCaption })
       });
       const data = await res.json();
@@ -73,7 +78,7 @@ export default function ViewPostsHistory() {
   const handlePublishNow = async (post: Post) => {
     setPublishingId(post.id);
     try {
-      const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST" });
+      const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST", headers: authHeaders() });
       const data = await res.json();
       if (data.success) {
         triggerRefresh();
@@ -89,7 +94,8 @@ export default function ViewPostsHistory() {
     if (!confirm("Are you sure you want to cancel and delete this scheduled post?")) return;
     try {
       const res = await fetch(`/api/posts/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: authHeaders()
       });
       const data = await res.json();
       if (data.success) {

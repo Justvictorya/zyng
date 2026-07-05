@@ -139,7 +139,13 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     const tokenText = await tokenRes.text();
     console.log(`[OAuth] Token response for ${platform} (${tokenRes.status}):`, tokenText.substring(0, 200));
 
-    const tokenData = JSON.parse(tokenText);
+    let tokenData: any;
+    try {
+      tokenData = JSON.parse(tokenText);
+    } catch {
+      console.error(`[OAuth] Invalid JSON from ${platform} token endpoint:`, tokenText.substring(0, 200));
+      return res.redirect("/?error=Invalid response from OAuth provider");
+    }
     const accessToken = tokenData.access_token;
 
     if (!accessToken) {
@@ -185,6 +191,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         p_token_expires_at: tokenData.expires_in
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : null,
+        p_refresh_token: tokenData.refresh_token || null,
       });
 
       if (upsertError) {
@@ -202,6 +209,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         p_token_expires_at: tokenData.expires_in
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : null,
+        p_refresh_token: tokenData.refresh_token || null,
       }).catch(() => {});
 
       return res.redirect(`/dashboard/settings?connected=instagram`);
@@ -216,6 +224,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       p_token_expires_at: tokenData.expires_in
         ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
         : null,
+      p_refresh_token: tokenData.refresh_token || null,
     });
 
     if (upsertError) {

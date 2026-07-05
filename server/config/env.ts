@@ -1,21 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-// Snapshot env vars at load time (Railway may alter process.env later)
-export const ENV_SNAPSHOT: Record<string, string> = {};
-function capture(key: string) {
-  ENV_SNAPSHOT[key] = process.env[key] || "";
-}
-capture("TWITTER_CLIENT_ID");
-capture("TWITTER_CLIENT_SECRET");
-
-const REQUIRED_VARS = [
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "GEMINI_API_KEY",
-] as const;
-
 const OAUTH_VARS = [
   "TIKTOK_CLIENT_ID",
   "TIKTOK_CLIENT_SECRET",
@@ -31,6 +16,20 @@ const OAUTH_VARS = [
   "WHATSAPP_CLIENT_SECRET",
   "YOUTUBE_CLIENT_ID",
   "YOUTUBE_CLIENT_SECRET",
+] as const;
+
+// Snapshot env vars at load time (Railway may alter process.env later)
+export const ENV_SNAPSHOT: Record<string, string> = {};
+function capture(key: string) {
+  ENV_SNAPSHOT[key] = process.env[key] || "";
+}
+for (const key of OAUTH_VARS) capture(key);
+
+const REQUIRED_VARS = [
+  "SUPABASE_URL",
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "GEMINI_API_KEY",
 ] as const;
 
 const PAYSTACK_VARS = [
@@ -61,4 +60,4 @@ function env(key: string, fallback?: string): string {
   return (process.env[key] || fallback || "").replace(/\s/g, "");
 }
 
-export { validateEnv, env, REQUIRED_VARS, OAUTH_VARS };
+export { validateEnv, env, REQUIRED_VARS };

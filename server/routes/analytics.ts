@@ -4,8 +4,6 @@ import { getPublishResults } from "../lib/scheduler";
 
 const router = Router();
 
-const PROCESSED_MARKER = "2099-01-01";
-
 function isPublished(post: any): boolean {
   const mem = getPublishResults(post.id);
   if (mem && mem.length > 0) return mem.some((r) => r.success);
@@ -13,7 +11,7 @@ function isPublished(post: any): boolean {
     const pr = typeof post.publish_results === "string" ? JSON.parse(post.publish_results) : post.publish_results;
     if (Array.isArray(pr)) return pr.some((r: any) => r.success);
   } catch {}
-  return typeof post.schedule_time === "string" && post.schedule_time.startsWith(PROCESSED_MARKER);
+  return false;
 }
 
 function parseResults(raw: any): { platform: string; success: boolean }[] {

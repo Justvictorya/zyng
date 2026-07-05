@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { validateEnv, ENV_SNAPSHOT } from "./config/env";
 import { requireAuth } from "./middleware/auth";
+import { errorHandler } from "./middleware/error";
 
 validateEnv();
 
@@ -76,8 +77,9 @@ app.use("/api/payments", paymentsRoutes);
 app.use("/api/profile", requireAuth, profileRoutes);
 app.use("/api/team", requireAuth, teamRoutes);
 
-// Debug endpoint to check OAuth env vars (no auth required, but only in dev)
-app.get("/api/debug/oauth-env", (_req, res) => {
+// Debug endpoint to check OAuth env vars — only in dev
+app.get("/api/debug/oauth-env", (req, res) => {
+  if (process.env.NODE_ENV === "production") return res.status(404).json({ error: "Not available in production" });
   const vars = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET", "TIKTOK_CLIENT_ID", "TIKTOK_CLIENT_SECRET", "FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"];
   const status: Record<string, string> = {};
   for (const v of vars) {
@@ -86,8 +88,9 @@ app.get("/api/debug/oauth-env", (_req, res) => {
   res.json(status);
 });
 
-// Direct env test - no caching, no auth
-app.get("/api/debug/env-raw", (_req, res) => {
+// Direct env test — only in dev
+app.get("/api/debug/env-raw", (req, res) => {
+  if (process.env.NODE_ENV === "production") return res.status(404).json({ error: "Not available in production" });
   res.json({
     TWITTER_CLIENT_ID: ENV_SNAPSHOT.TWITTER_CLIENT_ID ? ENV_SNAPSHOT.TWITTER_CLIENT_ID.substring(0, 8) + "..." : "missing",
     TWITTER_CLIENT_SECRET: ENV_SNAPSHOT.TWITTER_CLIENT_SECRET ? ENV_SNAPSHOT.TWITTER_CLIENT_SECRET.substring(0, 8) + "..." : "missing",
@@ -102,6 +105,9 @@ app.use("/tiktokHcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT.txt", (_req, res) => {
 });
 
 import { startScheduler } from "./lib/scheduler";
+
+// Error handler — after all routes
+app.use(errorHandler);
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

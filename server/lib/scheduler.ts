@@ -100,7 +100,7 @@ async function checkDuePosts() {
           try {
             await serviceDb
               .from("posts")
-              .update({ publish_results: JSON.stringify(updatedResults), schedule_time: "2099-01-01T00:00:00Z" })
+              .update({ publish_results: JSON.stringify(updatedResults) })
               .eq("id", post.id);
           } catch (err: any) {
             console.error(`[Scheduler] Failed to persist results for post ${post.id}:`, err.message);

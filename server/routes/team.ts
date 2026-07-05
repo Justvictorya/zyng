@@ -44,6 +44,7 @@ router.post("/invite", async (req: Request, res: Response) => {
     }
 
     const memberName = email.split("@")[0];
+    let tempPassword: string | null = null;
 
     // Check if user exists in Supabase Auth
     const { data: users } = await adminAuth.listUsers();
@@ -51,7 +52,7 @@ router.post("/invite", async (req: Request, res: Response) => {
     let memberId: string | null = existingUser?.id || null;
 
     if (!existingUser) {
-      const tempPassword = crypto.randomUUID() + "ZyngTm!";
+      tempPassword = crypto.randomUUID() + "ZyngTm!";
       const { data: newUser, error: createError } = await adminAuth.createUser({
         email,
         password: tempPassword,
@@ -80,9 +81,10 @@ router.post("/invite", async (req: Request, res: Response) => {
     return res.json({
       success: true,
       member,
+      temp_password: tempPassword,
       message: existingUser
         ? `${email} has been added to your team`
-        : `Invitation sent to ${email}`,
+        : `Invitation sent to ${email}. Share the temporary password with them.`,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -143,7 +145,7 @@ router.post("/resend/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: "Member not found" });
     }
 
-    return res.json({ success: true, message: `Invitation re-sent to ${member.email}` });
+    return res.json({ success: true, message: `Invitation re-sent to ${member.email}. If they don't have an account yet, create a new invite instead.` });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
