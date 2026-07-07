@@ -1,7 +1,26 @@
 -- Run this in Supabase SQL Editor once
--- SECURITY DEFINER function: runs as table owner, bypasses RLS
--- Callable from the client with the anon key via supabase.rpc()
+-- ============================================
+-- Creates the connected_accounts table if missing,
+-- defines SECURITY DEFINER RPCs for upsert + query,
+-- and grants execute to anon role so the server can call them.
 
+-- 1. Create the table if it doesn't exist
+CREATE TABLE IF NOT EXISTS connected_accounts (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  platform_user_id TEXT NOT NULL,
+  platform_user_name TEXT,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  token_type TEXT DEFAULT 'Bearer',
+  token_expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, platform)
+);
+
+-- 2. Upsert function (6 params — the server uses a separate call to save refresh_token)
 CREATE OR REPLACE FUNCTION upsert_connected_account(
   p_user_id UUID,
   p_platform TEXT,
@@ -30,7 +49,7 @@ BEGIN
 END;
 $$;
 
--- Get all connected accounts for a user
+-- 3. Get all connected accounts for a user
 CREATE OR REPLACE FUNCTION get_connected_accounts(
   p_user_id UUID
 ) RETURNS TABLE (
@@ -40,6 +59,7 @@ CREATE OR REPLACE FUNCTION get_connected_accounts(
   platform_user_id TEXT,
   platform_user_name TEXT,
   access_token TEXT,
+  refresh_token TEXT,
   token_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ
@@ -50,10 +70,14 @@ LANGUAGE plpgsql AS $$
 BEGIN
   RETURN QUERY
   SELECT ca.id, ca.user_id, ca.platform, ca.platform_user_id,
-         ca.platform_user_name, ca.access_token, ca.token_expires_at,
-         ca.created_at, ca.updated_at
+         ca.platform_user_name, ca.access_token, ca.refresh_token,
+         ca.token_expires_at, ca.created_at, ca.updated_at
   FROM connected_accounts ca
   WHERE ca.user_id = p_user_id
   ORDER BY ca.platform;
 END;
 $$;
+
+-- 4. Grant execute so the anon / service-role keys can invoke the functions
+GRANT EXECUTE ON FUNCTION upsert_connected_account TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION get_connected_accounts TO anon, authenticated, service_role;

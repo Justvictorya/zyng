@@ -1,10 +1,43 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
-import { supabase, serviceDb } from "../lib/supabase";
+import { serviceDb } from "../lib/supabase";
 import { requireAuth } from "../middleware/auth";
 import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId, getOauthClientSecret } from "../config/oauth";
 
 const router = Router();
+
+async function upsertConnectedAccount(userId: string, platform: string, platformUserId: string, platformUserName: string, accessToken: string, tokenExpiresAt: string | null, refreshToken?: string | null) {
+  console.log(`[OAuth] Upserting ${platform} for user ${userId}: platformUserId=${platformUserId}, platformUserName=${platformUserName}, hasRefresh=${!!refreshToken}`);
+
+  const { error } = await serviceDb.rpc("upsert_connected_account", {
+    p_user_id: userId,
+    p_platform: platform,
+    p_platform_user_id: platformUserId,
+    p_platform_user_name: platformUserName,
+    p_access_token: accessToken,
+    p_token_expires_at: tokenExpiresAt,
+  });
+
+  if (error) {
+    console.error(`[OAuth] RPC error for ${platform}:`, error.message, error.hint);
+    return error;
+  }
+
+  console.log(`[OAuth] RPC succeeded for ${platform}`);
+
+  // Store refresh_token separately if provided (maintains compatibility with v1 of the RPC function)
+  if (refreshToken) {
+    const { error: rtError } = await serviceDb
+      .from("connected_accounts")
+      .update({ refresh_token: refreshToken })
+      .eq("user_id", userId)
+      .eq("platform", platform);
+    if (rtError) console.warn(`[OAuth] Failed to save refresh_token for ${platform}:`, rtError.message);
+    else console.log(`[OAuth] refresh_token saved for ${platform}`);
+  }
+
+  return null;
+}
 
 async function saveOAuthState(stateId: string, userId: string, csrf: string, codeVerifier?: string) {
   await serviceDb.from("oauth_states").insert({
@@ -187,17 +220,14 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
       }
 
-      const { error: upsertError } = await serviceDb.rpc("upsert_connected_account", {
-        p_user_id: userId,
-        p_platform: "instagram",
-        p_platform_user_id: igUserId,
-        p_platform_user_name: igUserName,
-        p_access_token: accessToken,
-        p_token_expires_at: tokenData.expires_in
-          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-          : null,
-        p_refresh_token: tokenData.refresh_token || null,
-      });
+      const tokenExpiresAt = tokenData.expires_in
+        ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+        : null;
+
+      const upsertError = await upsertConnectedAccount(
+        userId, "instagram", igUserId, igUserName,
+        accessToken, tokenExpiresAt, tokenData.refresh_token
+      );
 
       if (upsertError) {
         console.error("[OAuth] Instagram upsert error:", upsertError.message, upsertError.hint);
@@ -206,18 +236,11 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
       // Also save/update Facebook connection with the same token
       try {
-        const { error: fbErr } = await serviceDb.rpc("upsert_connected_account", {
-          p_user_id: userId,
-          p_platform: "facebook",
-          p_platform_user_id: platformUserId,
-          p_platform_user_name: platformUserName,
-          p_access_token: accessToken,
-          p_token_expires_at: tokenData.expires_in
-            ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-            : null,
-          p_refresh_token: tokenData.refresh_token || null,
-        });
-        if (fbErr) console.warn("[OAuth] Facebook upsert failed:", fbErr);
+        const fbErr = await upsertConnectedAccount(
+          userId, "facebook", platformUserId, platformUserName,
+          accessToken, tokenExpiresAt, tokenData.refresh_token
+        );
+        if (fbErr) console.warn("[OAuth] Facebook upsert failed:", fbErr.message);
       } catch (e) {
         console.warn("[OAuth] Facebook upsert failed:", e);
       }
@@ -225,17 +248,14 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/auth/callback?connected=instagram`);
     }
 
-    const { error: upsertError } = await serviceDb.rpc("upsert_connected_account", {
-      p_user_id: userId,
-      p_platform: platform,
-      p_platform_user_id: platformUserId,
-      p_platform_user_name: platformUserName,
-      p_access_token: accessToken,
-      p_token_expires_at: tokenData.expires_in
-        ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-        : null,
-      p_refresh_token: tokenData.refresh_token || null,
-    });
+    const tokenExpiresAt = tokenData.expires_in
+      ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+      : null;
+
+    const upsertError = await upsertConnectedAccount(
+      userId, platform, platformUserId, platformUserName,
+      accessToken, tokenExpiresAt, tokenData.refresh_token
+    );
 
     if (upsertError) {
       console.error(`[OAuth] Upsert error for ${platform}:`, upsertError.message, upsertError.hint);
@@ -262,6 +282,7 @@ router.get("/accounts", requireAuth, async (req: Request, res: Response) => {
     console.error(`[OAuth] get_connected_accounts RPC error for user ${userId}:`, error.message, error.hint);
     return res.status(500).json({ success: false, error: error.message });
   }
+  console.log(`[OAuth] Accounts for user ${userId}:`, JSON.stringify(data));
   return res.json({ success: true, accounts: data || [] });
 });
 
@@ -271,7 +292,7 @@ router.delete("/accounts/:platform", requireAuth, async (req: Request, res: Resp
 
   const { platform } = req.params;
 
-  const { error } = await supabase
+  const { error } = await serviceDb
     .from("connected_accounts")
     .delete()
     .eq("user_id", userId)
