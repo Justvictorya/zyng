@@ -252,8 +252,13 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
     let userId: string;
 
     if (error?.message?.includes?.("already been registered")) {
-      const { data: users } = await adminAuth.listUsers({ page: 1, perPage: 10000 });
-      const existing = users?.users?.find((u: any) => u.email === email);
+      const sbUrl = env("SUPABASE_URL");
+      const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
+      const fetchRes = await fetch(`${sbUrl}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(email)}`, {
+        headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+      });
+      const body = await fetchRes.json();
+      const existing = body.users?.[0];
       if (!existing) {
         return res.status(400).json({ success: false, error: error.message });
       }
