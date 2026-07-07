@@ -254,11 +254,16 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
     if (error?.message?.includes?.("already been registered")) {
       const sbUrl = env("SUPABASE_URL");
       const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
-      const fetchRes = await fetch(`${sbUrl}/auth/v1/admin/users?filter=email:eq:${encodeURIComponent(email)}`, {
-        headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
-      });
-      const body = await fetchRes.json();
-      const existing = body.users?.[0];
+      let existing: any = null;
+      for (let page = 1; page <= 10; page++) {
+        const fetchRes = await fetch(`${sbUrl}/auth/v1/admin/users?page=${page}&per_page=200`, {
+          headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+        });
+        const body = await fetchRes.json();
+        existing = body.users?.find((u: any) => u.email === email);
+        if (existing) break;
+        if (!body.users?.length) break;
+      }
       if (!existing) {
         return res.status(400).json({ success: false, error: error.message });
       }
