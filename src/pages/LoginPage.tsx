@@ -86,7 +86,7 @@ export default function LoginPage() {
       const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       localStorage.setItem("tiktok_code_verifier", codeVerifier);
-      const redirectUri = `${window.location.origin}/auth/callback`;
+      const redirectUri = `${window.location.origin}/api/v1/oauth/tiktok/callback`;
       window.location.href = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientId}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     } else if (p.id === "linkedin") {
       const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;

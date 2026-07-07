@@ -149,7 +149,7 @@ export default function SignupPage() {
                   const digest2 = await crypto.subtle.digest("SHA-256", data2);
                   const challenge2 = btoa(String.fromCharCode(...new Uint8Array(digest2))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
                   localStorage.setItem("tiktok_code_verifier", codeVerifier2);
-                  const redirectUri = `${window.location.origin}/auth/callback`;
+                  const redirectUri = `${window.location.origin}/api/v1/oauth/tiktok/callback`;
                   window.location.href = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientId}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${csrfState}&code_challenge=${challenge2}&code_challenge_method=S256`;
                 } else if (p.id === "linkedin") {
                   const clientId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;

@@ -72,6 +72,13 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   const { platform } = req.params;
   const { code, state, error: oauthError } = req.query;
 
+  const rawState = state as string;
+
+  // If state is a simple CSRF (no colon), this is a login flow callback — redirect to frontend
+  if (rawState && !rawState.includes(":")) {
+    return res.redirect(`/auth/callback?code=${encodeURIComponent(code as string)}&state=${encodeURIComponent(rawState)}&provider=${platform}`);
+  }
+
   const cfg = OAUTH_CONFIG[platform];
   if (!cfg) return res.status(404).send("Unknown platform");
 
@@ -83,11 +90,10 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
   let parsedState: { stateId: string; csrf: string } | null = null;
   try {
-    const raw = state as string;
-    const sep = raw.indexOf(":");
-    parsedState = { stateId: raw.substring(0, sep), csrf: raw.substring(sep + 1) };
+    const sep = rawState.indexOf(":");
+    parsedState = { stateId: rawState.substring(0, sep), csrf: rawState.substring(sep + 1) };
   } catch (e) {
-    console.error(`[OAuth] State parse error for ${platform}:`, e, "state:", state);
+    console.error(`[OAuth] State parse error for ${platform}:`, e, "state:", rawState);
     return res.redirect("/?error=Invalid OAuth state");
   }
 
