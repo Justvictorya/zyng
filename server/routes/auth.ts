@@ -241,27 +241,6 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
         avatar = "";
     }
 
-    const { data: users } = await adminAuth.listUsers();
-    const existing = users.users.find((u: any) => u.email === email);
-
-    if (existing) {
-      const user = {
-        id: existing.id,
-        name: existing.user_metadata?.full_name || name,
-        email: existing.email,
-        tier: existing.user_metadata?.tier || "Free",
-        joined: new Date(existing.created_at).toLocaleString("en-US", { month: "long", year: "numeric" }),
-        avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
-      };
-      const tempPassword = crypto.randomUUID() + "Zyng!1";
-      await adminAuth.updateUserById(existing.id, { password: tempPassword });
-      const { data: sd } = await supabase.auth.signInWithPassword({ email, password: tempPassword });
-      return res.json({
-        success: true, user,
-        session: sd.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
-      });
-    }
-
     const password = crypto.randomUUID() + "Zyng!2";
     const { data, error } = await adminAuth.createUser({
       email,
@@ -269,15 +248,30 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       user_metadata: { full_name: name },
       email_confirm: true,
     });
-    if (error) return res.status(400).json({ success: false, error: error.message });
+
+    let userId: string;
+
+    if (error?.message?.includes?.("already been registered")) {
+      const { data: users } = await adminAuth.listUsers({ page: 1, perPage: 10000 });
+      const existing = users?.users?.find((u: any) => u.email === email);
+      if (!existing) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      userId = existing.id;
+      await adminAuth.updateUserById(userId, { password });
+    } else if (error) {
+      return res.status(400).json({ success: false, error: error.message });
+    } else {
+      userId = data.user!.id;
+    }
 
     const user = {
-      id: data.user!.id,
-      name: data.user!.user_metadata?.full_name || name,
-      email: data.user!.email,
+      id: userId,
+      name,
+      email,
       tier: "Free",
       joined: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
-      avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+      avatar,
     };
 
     const { data: sd } = await supabase.auth.signInWithPassword({ email, password });
