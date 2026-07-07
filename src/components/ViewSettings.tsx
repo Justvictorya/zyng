@@ -71,12 +71,31 @@ export default function ViewSettings() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      const token = await ensureValidToken();
-      if (!token) return;
+      let token = await ensureValidToken();
+      // If ensureValidToken returned null (expired+can't refresh), try raw token anyway
+      if (!token) {
+        token = localStorage.getItem("zyng_token");
+        if (!token) return;
+      }
       try {
         const res = await fetch("/api/oauth/accounts", {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (res.status === 401) {
+          // Token might be expired — try refresh once more, then give up
+          const refreshed = await ensureValidToken();
+          if (!refreshed) {
+            return;
+          }
+          const retry = await fetch("/api/oauth/accounts", {
+            headers: { Authorization: `Bearer ${refreshed}` },
+          });
+          const retryData = await retry.json();
+          if (retryData.success) {
+            setLinkedAccounts(new Set(retryData.accounts.map((a: any) => a.platform)));
+          }
+          return;
+        }
         const data = await res.json();
         if (data.success) {
           setLinkedAccounts(new Set(data.accounts.map((a: any) => a.platform)));

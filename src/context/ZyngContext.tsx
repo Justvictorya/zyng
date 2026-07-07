@@ -49,7 +49,7 @@ export async function ensureValidToken(): Promise<string | null> {
     }
   }
 
-  return token; // return the (expired) token rather than clearing session
+  return null;
 }
 
 interface ZyngContextValue {
