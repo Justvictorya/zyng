@@ -70,6 +70,7 @@ export default function LoginPage() {
 
   async function initiateSocialLogin(p: { id: string; supabase: boolean }) {
     if (p.supabase) {
+      localStorage.removeItem("current_oauth_provider");
       supabase.auth.signInWithOAuth({
         provider: p.id as any,
         options: { redirectTo: `${window.location.origin}/auth/callback` },

@@ -13,18 +13,17 @@ export default function AuthCallback() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    let provider = searchParams.get("provider");
+    const provider = searchParams.get("provider");
 
-    if (!provider) {
-      provider = localStorage.getItem("current_oauth_provider");
+    if (provider) {
       localStorage.removeItem("current_oauth_provider");
+      if (CUSTOM_OAUTH_PROVIDERS.includes(provider)) {
+        handleSocialLogin(provider);
+        return;
+      }
     }
 
-    if (provider && CUSTOM_OAUTH_PROVIDERS.includes(provider)) {
-      handleSocialLogin(provider);
-    } else {
-      handleSupabaseCallback();
-    }
+    handleSupabaseCallback();
   }, []);
 
   async function handleSocialLogin(platform: string) {
@@ -43,6 +42,7 @@ export default function AuthCallback() {
     }
 
     localStorage.removeItem(`${platform}_login_state`);
+    localStorage.removeItem("current_oauth_provider");
     const codeVerifier = localStorage.getItem(`${platform}_code_verifier`) || undefined;
     localStorage.removeItem(`${platform}_code_verifier`);
 

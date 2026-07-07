@@ -165,6 +165,7 @@ export default function SignupPage() {
                   localStorage.setItem("twitter_code_verifier", codeVerifier);
                   window.location.href = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("tweet.read users.read offline.access")}&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
                 } else {
+                  localStorage.removeItem("current_oauth_provider");
                   supabase.auth.signInWithOAuth({
                     provider: p.id as any,
                     options: { redirectTo: `${window.location.origin}/auth/callback` },
