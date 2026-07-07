@@ -187,7 +187,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
       }
 
-      const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
+      const { error: upsertError } = await serviceDb.rpc("upsert_connected_account", {
         p_user_id: userId,
         p_platform: "instagram",
         p_platform_user_id: igUserId,
@@ -200,13 +200,13 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       });
 
       if (upsertError) {
-        console.error("[OAuth] Instagram upsert error:", upsertError);
+        console.error("[OAuth] Instagram upsert error:", upsertError.message, upsertError.hint);
         return res.redirect(`/?error=Failed to save Instagram connection`);
       }
 
       // Also save/update Facebook connection with the same token
       try {
-        const { error: fbErr } = await supabase.rpc("upsert_connected_account", {
+        const { error: fbErr } = await serviceDb.rpc("upsert_connected_account", {
           p_user_id: userId,
           p_platform: "facebook",
           p_platform_user_id: platformUserId,
@@ -225,7 +225,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/auth/callback?connected=instagram`);
     }
 
-    const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
+    const { error: upsertError } = await serviceDb.rpc("upsert_connected_account", {
       p_user_id: userId,
       p_platform: platform,
       p_platform_user_id: platformUserId,
@@ -238,10 +238,11 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     });
 
     if (upsertError) {
-      console.error(`[OAuth] Upsert error for ${platform}:`, upsertError);
+      console.error(`[OAuth] Upsert error for ${platform}:`, upsertError.message, upsertError.hint);
       return res.redirect(`/?error=Failed to save ${platform} connection`);
     }
 
+    console.log(`[OAuth] ${platform} account connected for user ${userId}`);
     res.redirect(`/auth/callback?connected=${platform}`);
   } catch (err: any) {
     console.error(`[OAuth] Callback error for ${platform}:`, err.message);
@@ -253,11 +254,14 @@ router.get("/accounts", requireAuth, async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
-  const { data, error } = await supabase.rpc("get_connected_accounts", {
+  const { data, error } = await serviceDb.rpc("get_connected_accounts", {
     p_user_id: userId,
   });
 
-  if (error) return res.status(500).json({ success: false, error: error.message });
+  if (error) {
+    console.error(`[OAuth] get_connected_accounts RPC error for user ${userId}:`, error.message, error.hint);
+    return res.status(500).json({ success: false, error: error.message });
+  }
   return res.json({ success: true, accounts: data || [] });
 });
 

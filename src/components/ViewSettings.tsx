@@ -85,6 +85,7 @@ export default function ViewSettings() {
           // Token might be expired — try refresh once more, then give up
           const refreshed = await ensureValidToken();
           if (!refreshed) {
+            console.warn("fetchAccounts: 401 and token refresh failed — accounts will appear disconnected");
             return;
           }
           const retry = await fetch("/api/oauth/accounts", {
@@ -99,6 +100,8 @@ export default function ViewSettings() {
         const data = await res.json();
         if (data.success) {
           setLinkedAccounts(new Set(data.accounts.map((a: any) => a.platform)));
+        } else {
+          console.warn("fetchAccounts: API returned error:", data.error);
         }
       } catch (e) {
         console.error("Failed to fetch connected accounts", e);
@@ -341,8 +344,11 @@ export default function ViewSettings() {
   };
 
   const handleConnect = async (networkId: string) => {
-    const token = localStorage.getItem("zyng_token");
-    if (!token) return;
+    const token = await ensureValidToken();
+    if (!token) {
+      showToast("Session expired. Please log in again.", "error");
+      return;
+    }
     setConnectingNetwork(networkId);
     try {
       const res = await fetch(`/api/oauth/${networkId}/connect`, {
@@ -366,8 +372,11 @@ export default function ViewSettings() {
   };
 
   const handleDisconnect = async (networkId: string) => {
-    const token = localStorage.getItem("zyng_token");
-    if (!token) return;
+    const token = await ensureValidToken();
+    if (!token) {
+      showToast("Session expired. Please log in again.", "error");
+      return;
+    }
     try {
       const res = await fetch(`/api/oauth/accounts/${networkId}`, {
         method: "DELETE",
