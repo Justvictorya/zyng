@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase-client";
 import { useZyng } from "../context/ZyngContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 const CUSTOM_OAUTH_PROVIDERS = ["linkedin", "twitter", "instagram"];
 
@@ -10,9 +10,27 @@ export default function AuthCallback() {
   const { setCurrentUser } = useZyng();
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const [connected, setConnected] = useState("");
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Handle "account connected" flow (coming from OAuth connect callback)
+    const connectedPlatform = searchParams.get("connected");
+    const errorParam = searchParams.get("error");
+
+    if (connectedPlatform) {
+      setConnected(connectedPlatform);
+      localStorage.setItem("oauth_connected", connectedPlatform);
+      setTimeout(() => navigate("/dashboard/settings", { replace: true }), 1500);
+      return;
+    }
+
+    if (errorParam) {
+      setError(errorParam);
+      setTimeout(() => navigate("/dashboard/settings", { replace: true }), 3000);
+      return;
+    }
+
     const provider = searchParams.get("provider");
 
     if (provider) {
@@ -113,14 +131,23 @@ export default function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050507]">
       <div className="text-center space-y-4">
-        {error ? (
+        {connected ? (
           <>
+            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+            <p className="text-emerald-400 text-sm font-semibold capitalize">
+              Connected to {connected}!
+            </p>
+            <p className="text-slate-500 text-xs">Redirecting to settings...</p>
+          </>
+        ) : error ? (
+          <>
+            <XCircle className="h-12 w-12 text-red-500 mx-auto" />
             <p className="text-red-400 text-sm">{error}</p>
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/dashboard/settings")}
               className="text-indigo-400 hover:underline text-xs"
             >
-              Back to login
+              Back to settings
             </button>
           </>
         ) : (

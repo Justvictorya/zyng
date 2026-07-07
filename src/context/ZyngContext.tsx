@@ -15,7 +15,7 @@ function isTokenExpired(token: string): boolean {
   return Date.now() >= payload.exp * 1000;
 }
 
-async function ensureValidToken(): Promise<string | null> {
+export async function ensureValidToken(): Promise<string | null> {
   const token = localStorage.getItem("zyng_token");
   const refreshToken = localStorage.getItem("zyng_refresh_token");
   if (!token) return null;
@@ -31,7 +31,7 @@ async function ensureValidToken(): Promise<string | null> {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
           },
           body: JSON.stringify({ refresh_token: refreshToken }),
         }
@@ -49,10 +49,7 @@ async function ensureValidToken(): Promise<string | null> {
     }
   }
 
-  localStorage.removeItem("zyng_token");
-  localStorage.removeItem("zyng_refresh_token");
-  localStorage.removeItem("zyng_user");
-  return null;
+  return token; // return the (expired) token rather than clearing session
 }
 
 interface ZyngContextValue {
@@ -90,13 +87,10 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   const [nepaDraftActive, setNepaDraftActive] = useState(false);
   const [triggerDraftRecoverSignal, setTriggerDraftRecoverSignal] = useState(false);
 
-  // Check token validity on mount
+  // Check token validity on mount — don't wipe session if refresh fails
+  // (prevents bounce to /login after OAuth callback takes too long)
   useEffect(() => {
-    ensureValidToken().then((token) => {
-      if (!token && currentUser) {
-        setCurrentUser(null);
-      }
-    });
+    ensureValidToken().catch(() => {});
   }, []);
 
   useEffect(() => {

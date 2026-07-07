@@ -83,10 +83,10 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
   if (!cfg) return res.status(404).send("Unknown platform");
 
     if (oauthError) {
-    return res.redirect(`/dashboard/settings?error=${platform} authorization was denied`);
+    return res.redirect(`/auth/callback?error=${platform} authorization was denied`);
   }
 
-  if (!code) return res.redirect("/dashboard/settings?error=No authorization code received");
+  if (!code) return res.redirect("/auth/callback?error=No authorization code received");
 
   let parsedState: { stateId: string; csrf: string } | null = null;
   try {
@@ -222,7 +222,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         console.warn("[OAuth] Facebook upsert failed:", e);
       }
 
-      return res.redirect(`/dashboard/settings?connected=instagram`);
+      return res.redirect(`/auth/callback?connected=instagram`);
     }
 
     const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
@@ -242,7 +242,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/?error=Failed to save ${platform} connection`);
     }
 
-    res.redirect(`/dashboard/settings?connected=${platform}`);
+    res.redirect(`/auth/callback?connected=${platform}`);
   } catch (err: any) {
     console.error(`[OAuth] Callback error for ${platform}:`, err.message);
     res.redirect("/?error=OAuth connection failed");
