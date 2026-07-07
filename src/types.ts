@@ -19,6 +19,7 @@ export interface Post {
   platform_schedule?: string;
   schedule_time: string;
   status: "scheduled" | "published" | "draft";
+  publish_results?: string;
 }
 
 export type DialectType = "english" | "pidgin" | "yoruba" | "hausa" | "igbo";

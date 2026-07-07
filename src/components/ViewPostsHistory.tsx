@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   History, 
   Trash2, 
@@ -15,7 +16,8 @@ import {
   Twitter,
   Linkedin,
   Loader2,
-  Send
+  Send,
+  BarChart2
 } from "lucide-react";
 import { Post } from "../types";
 import { translations } from "../lib/translations";
@@ -24,6 +26,7 @@ import { useZyng } from "../context/ZyngContext";
 export default function ViewPostsHistory() {
   const { dialect, posts, isPostsLoading: isLoading, handlePostDeleted: onPostDeleted, handlePostUpdated: onPostUpdated, loadPosts: triggerRefresh } = useZyng();
   const t = translations[dialect];
+  const navigate = useNavigate();
 
   function authHeaders(): Record<string, string> {
     const token = localStorage.getItem("zyng_token");
@@ -334,6 +337,15 @@ export default function ViewPostsHistory() {
                           <span>Publish Now</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => navigate(`/dashboard/post/${post.id}`)}
+                        className="p-2 border border-indigo-700/40 text-indigo-400 hover:text-indigo-300 hover:border-indigo-600 hover:bg-indigo-500/5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold"
+                        title="View per-platform delivery statistics"
+                        id={`stats-btn-${post.id}`}
+                      >
+                        <BarChart2 className="h-3.5 w-3.5" />
+                        <span>Stats</span>
+                      </button>
                       <button
                         onClick={() => handleStartEdit(post)}
                         className="p-2 border border-slate-850 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-950/20 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold"

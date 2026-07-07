@@ -14,6 +14,7 @@ import ViewDashboard from "./components/ViewDashboard";
 import ViewCreatePost from "./components/ViewCreatePost";
 import ViewPostsHistory from "./components/ViewPostsHistory";
 import ViewAnalytics from "./components/ViewAnalytics";
+import ViewPostAnalytics from "./components/ViewPostAnalytics";
 import ViewSettings from "./components/ViewSettings";
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
           <Route index element={<ViewDashboard />} />
           <Route path="create-post" element={<ViewCreatePost />} />
           <Route path="posts" element={<ViewPostsHistory />} />
+          <Route path="post/:id" element={<ViewPostAnalytics />} />
           <Route path="analytics" element={<ViewAnalytics />} />
           <Route path="settings" element={<ViewSettings />} />
         </Route>
