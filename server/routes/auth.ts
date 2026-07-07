@@ -176,8 +176,8 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
   if (!clientId) return res.status(500).json({ success: false, error: `${platform} OAuth not configured` });
 
   try {
-    const redirectUri = platform === "tiktok"
-      ? `${req.protocol}://${req.get("host")}/api/v1/oauth/tiktok/callback`
+    const redirectUri = platform === "instagram"
+      ? `${req.protocol}://${req.get("host")}/auth/callback?provider=instagram`
       : `${req.protocol}://${req.get("host")}/auth/callback?provider=${platform}`;
 
     const tokenBody: Record<string, string> = {
@@ -185,7 +185,10 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       grant_type: "authorization_code",
       redirect_uri: redirectUri,
     };
-    if (cfg.needsBasicAuth) {
+    if (platform === "instagram") {
+      tokenBody.client_id = clientId;
+      tokenBody.client_secret = clientSecret;
+    } else if (cfg.needsBasicAuth) {
       tokenBody.client_id = clientId;
     } else if (cfg.useClientKey) {
       tokenBody.client_key = clientId;
@@ -200,11 +203,16 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
     }
 
     const tokenHeaders: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
-    if (cfg.needsBasicAuth) {
+    if (cfg?.needsBasicAuth) {
       tokenHeaders["Authorization"] = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
     }
 
-    const tokenRes = await fetch(cfg.tokenUrl, {
+    let tokenUrl = cfg?.tokenUrl;
+    if (platform === "instagram") {
+      tokenUrl = "https://api.instagram.com/oauth/access_token";
+    }
+
+    const tokenRes = await fetch(tokenUrl, {
       method: "POST",
       headers: tokenHeaders,
       body: new URLSearchParams(tokenBody),
@@ -214,31 +222,38 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: tokenData.error || "Failed to get access token" });
     }
 
-    const profileRes = await fetch(cfg.profileUrl, {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const profileData = await profileRes.json();
-    const { platformUserId, platformUserName } = cfg.profileParser(profileData);
-
     let email: string;
     let name: string;
     let avatar: string;
+    let platformUserId: string;
+    let platformUserName: string;
 
-    switch (platform) {
-      case "linkedin":
-        email = profileData.email || `linkedin_${platformUserId}@zyng.app`;
-        name = platformUserName || "LinkedIn User";
-        avatar = profileData.picture || "";
-        break;
-      case "tiktok":
-        email = `tiktok_${platformUserId}@zyng.app`;
-        name = platformUserName || "TikTok User";
-        avatar = profileData.data?.user?.avatar_url || "";
-        break;
-      default:
-        email = `social_${platform}_${platformUserId}@zyng.app`;
-        name = platformUserName || "User";
-        avatar = "";
+    if (platform === "instagram") {
+      email = `instagram_${tokenData.user_id}@zyng.app`;
+      name = tokenData.username || "Instagram User";
+      avatar = "";
+      platformUserId = tokenData.user_id?.toString();
+      platformUserName = tokenData.username || "Instagram User";
+    } else {
+      const profileRes = await fetch(cfg.profileUrl, {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const profileData = await profileRes.json();
+      const parsed = cfg.profileParser(profileData);
+      platformUserId = parsed.platformUserId;
+      platformUserName = parsed.platformUserName;
+
+      switch (platform) {
+        case "linkedin":
+          email = profileData.email || `linkedin_${platformUserId}@zyng.app`;
+          name = platformUserName || "LinkedIn User";
+          avatar = profileData.picture || "";
+          break;
+        default:
+          email = `social_${platform}_${platformUserId}@zyng.app`;
+          name = platformUserName || "User";
+          avatar = "";
+      }
     }
 
     const password = crypto.randomUUID() + "Zyng!2";
