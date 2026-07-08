@@ -253,9 +253,10 @@ router.get("/accounts", requireAuth, async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
-  const { data, error } = await supabase.rpc("get_connected_accounts", {
-    p_user_id: userId,
-  });
+  const { data, error } = await serviceDb
+    .from("connected_accounts")
+    .select("*")
+    .eq("user_id", userId);
 
   if (error) return res.status(500).json({ success: false, error: error.message });
   return res.json({ success: true, accounts: data || [] });
