@@ -283,7 +283,6 @@ router.get("/accounts", requireAuth, async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, error: error.message });
   }
   console.log(`[OAuth] Accounts for user ${userId}:`, JSON.stringify(data));
-  console.log(`[OAuth] Returning ${data?.length || 0} accounts`);
   return res.json({ success: true, accounts: data || [] });
 });
 
