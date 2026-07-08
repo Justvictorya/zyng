@@ -18,7 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { translations } from "../lib/translations";
-import { useZyng, ensureValidToken } from "../context/ZyngContext";
+import { useZyng } from "../context/ZyngContext";
 
 function loadPaystackScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -71,7 +71,7 @@ export default function ViewSettings() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      const token = await ensureValidToken();
+      const token = localStorage.getItem("zyng_token");
       if (!token) return;
       try {
         const res = await fetch("/api/oauth/accounts", {
@@ -94,16 +94,10 @@ export default function ViewSettings() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    let connected = params.get("connected");
+    const connected = params.get("connected");
     const error = params.get("error");
     const paymentRef = params.get("reference");
     const trxref = params.get("trxref");
-
-    // Fallback: read from localStorage (set by AuthCallback when redirecting through public route)
-    if (!connected) {
-      connected = localStorage.getItem("oauth_connected");
-      if (connected) localStorage.removeItem("oauth_connected");
-    }
 
     if (paymentRef || trxref) {
       handleVerifyPayment(paymentRef || trxref || "");
@@ -113,10 +107,10 @@ export default function ViewSettings() {
     if (connected) {
       showToast(`Connected to ${connected}!`, "success");
       setLinkedAccounts(prev => new Set(prev).add(connected));
-      window.history.replaceState({}, "", window.location.pathname);
+      window.history.replaceState({}, "", "/settings");
     } else if (error) {
       showToast(`Error: ${error}`, "error");
-      window.history.replaceState({}, "", window.location.pathname);
+      window.history.replaceState({}, "", "/settings");
     }
   }, []);
 
