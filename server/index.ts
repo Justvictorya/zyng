@@ -88,31 +88,6 @@ app.get("/api/debug/oauth-env", (req, res) => {
   res.json(status);
 });
 
-// Debug: check if connected_accounts table and RPCs exist
-app.get("/api/debug/db-check", async (req, res) => {
-  if (process.env.NODE_ENV === "production") return res.status(404).json({ error: "Not available in production" });
-  const { supabase, serviceDb } = await import("./lib/supabase");
-  const results: any = {};
-
-  try {
-    const { data: tableExists, error: tableError } = await supabase
-      .from("connected_accounts")
-      .select("id", { count: "exact", head: true });
-    results.tableCheck = tableError
-      ? { error: tableError.message, hint: tableError.hint || "Table may not exist" }
-      : { ok: true };
-  } catch (e: any) { results.tableCheck = { error: e.message }; }
-
-  try {
-    const { data: rpcTest, error: rpcError } = await supabase.rpc("get_connected_accounts", { p_user_id: "00000000-0000-0000-0000-000000000000" });
-    results.rpcTest = rpcError
-      ? { error: rpcError.message, hint: rpcError.hint || "RPC may not exist or permission denied" }
-      : { ok: true, note: "RPC exists and anon has execute permission" };
-  } catch (e: any) { results.rpcTest = { error: e.message }; }
-
-  res.json(results);
-});
-
 // Direct env test — only in dev
 app.get("/api/debug/env-raw", (req, res) => {
   if (process.env.NODE_ENV === "production") return res.status(404).json({ error: "Not available in production" });
