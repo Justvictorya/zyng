@@ -105,6 +105,17 @@ app.use("/tiktokHcxqbpmiTCc1GXNgZbQfoVFWw8b90XTT.txt", (_req, res) => {
 });
 
 import { startScheduler } from "./lib/scheduler";
+import { serviceDb } from "./lib/supabase";
+
+// Check oauth_states table exists on startup
+(async () => {
+  try {
+    const { error } = await serviceDb.from("oauth_states").select("state_id").limit(1);
+    if (error && error.message?.includes("does not exist")) {
+      console.warn("[OAuth] oauth_states table missing — OAuth connect will fail!");
+    }
+  } catch {}
+})();
 
 // Error handler — after all routes
 app.use(errorHandler);

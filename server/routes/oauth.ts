@@ -7,24 +7,32 @@ import { OAUTH_CONFIG, oauthRedirectUri, getOauthClientId, getOauthClientSecret 
 const router = Router();
 
 async function saveOAuthState(stateId: string, userId: string, csrf: string, codeVerifier?: string) {
-  await serviceDb.from("oauth_states").insert({
-    state_id: stateId,
-    user_id: userId,
-    csrf,
-    code_verifier: codeVerifier || null,
-  }).then(() => {
+  try {
+    await serviceDb.from("oauth_states").insert({
+      state_id: stateId,
+      user_id: userId,
+      csrf,
+      code_verifier: codeVerifier || null,
+    });
     setTimeout(async () => {
       await serviceDb.from("oauth_states").delete().eq("state_id", stateId);
     }, 10 * 60 * 1000);
-  });
+  } catch (e) {
+    console.error("[OAuth] Failed to save state:", e);
+  }
 }
 
 async function getOAuthState(stateId: string) {
-  const { data } = await serviceDb.from("oauth_states").select("*").eq("state_id", stateId).single();
-  if (data) {
-    await serviceDb.from("oauth_states").delete().eq("state_id", stateId);
+  try {
+    const { data } = await serviceDb.from("oauth_states").select("*").eq("state_id", stateId).single();
+    if (data) {
+      await serviceDb.from("oauth_states").delete().eq("state_id", stateId);
+    }
+    return data;
+  } catch (e) {
+    console.error("[OAuth] Failed to get state:", e);
+    return null;
   }
-  return data;
 }
 
 router.get("/:platform/connect", requireAuth, async (req: Request, res: Response) => {
