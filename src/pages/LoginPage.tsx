@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, RefreshCw } from "lucide-react";
+import { Mail, Lock, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { useZyng } from "../context/ZyngContext";
 import { supabase } from "../lib/supabase-client";
 
@@ -9,6 +9,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -131,7 +132,10 @@ export default function LoginPage() {
             </div>
             <div className="relative">
               <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono" placeholder="••••••••" required />
+              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-10 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono" placeholder="••••••••" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer">
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 

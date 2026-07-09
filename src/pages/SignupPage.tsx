@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useZyng } from "../context/ZyngContext";
 import { supabase } from "../lib/supabase-client";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignupPage() {
   const { setCurrentUser } = useZyng();
@@ -9,6 +10,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -98,7 +100,12 @@ export default function SignupPage() {
 
           <div className="space-y-1">
             <label className="text-[10px] font-mono text-slate-500 uppercase block">Password strength</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono" placeholder="Create password" required />
+            <div className="relative">
+              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2.5 pr-10 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono" placeholder="Create password" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer">
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {password && (
               <div className="bg-slate-950 p-2 rounded-lg border border-slate-850 mt-1 space-y-1">
                 <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
