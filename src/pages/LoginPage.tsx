@@ -46,6 +46,31 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = window.prompt("Enter your email to receive a password reset link:");
+    if (!email) return;
+    setError("");
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setError(""); // clear any previous error
+        alert("Password reset link sent! Check your email.");
+      } else {
+        setError(data.error || "Failed to send reset email");
+      }
+    } catch {
+      setError("Failed to connect to authentication server.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const platforms = [
     { id: "google", label: "Google", title: "Login with Google", supabase: true },
     { id: "facebook", label: "Meta", title: "Login with Facebook", supabase: true },
@@ -128,7 +153,7 @@ export default function LoginPage() {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Password</label>
-              <span className="text-[10px] text-slate-500 hover:text-indigo-400 cursor-pointer">Forgot password?</span>
+              <span onClick={handleForgotPassword} className="text-[10px] text-slate-500 hover:text-indigo-400 cursor-pointer">Forgot password?</span>
             </div>
             <div className="relative">
               <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
