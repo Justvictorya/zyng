@@ -72,7 +72,7 @@ export default function SignupPage() {
 
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-6 shadow-xl relative z-10">
         <div className="text-center space-y-1.5">
-          <span className="text-[10px] text-indigo-400 font-bold font-mono tracking-widest uppercase">Start Free Social Campaigns</span>
+          <span className="text-[10px] text-indigo-400 font-bold font-mono tracking-widest uppercase">Start Free Social Scheduling</span>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">Join Zyng Socials</h2>
           <p className="text-xs text-slate-400">Create a social manager profile to deploy 6 cross-posting.</p>
         </div>

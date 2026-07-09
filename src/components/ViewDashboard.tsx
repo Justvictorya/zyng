@@ -37,7 +37,7 @@ export default function ViewDashboard() {
       case "igbo":
         return `Nnọọ o nwanne, ${name}! Anyị nọ n'ọrụ ugbu a.`;
       default:
-        return `Welcome back, ${name}! Let's handle your social campaign.`;
+        return `Welcome back, ${name}! Let's handle your social media.`;
     }
   };
 
@@ -57,13 +57,13 @@ export default function ViewDashboard() {
           <div className="space-y-2.5 max-w-xl">
             <span className="inline-flex items-center gap-1 bg-purple-500/15 text-purple-350 border border-purple-500/20 px-2.5 py-1 rounded-full text-xs font-semibold font-mono tracking-wide uppercase">
               <Sparkles className="h-3 w-3 text-purple-400 shrink-0" />
-              CAMPAIGN DASHBOARD
+              SOCIAL DASHBOARD
             </span>
             <h3 className="text-2xl font-bold font-sans text-slate-100 tracking-tight leading-tight">
               {getDialectGreeting()}
             </h3>
             <p className="text-xs text-slate-400 font-sans leading-relaxed">
-              Your automated campaigns. Powered by Gemini AI captions and cross-platform scheduling.
+              Your automated posts. Powered by Gemini AI captions and cross-platform scheduling.
             </p>
           </div>
 
@@ -228,7 +228,7 @@ export default function ViewDashboard() {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h4 className="text-sm font-semibold text-slate-200">Active Campaign Planner Queue</h4>
+            <h4 className="text-sm font-semibold text-slate-200">Active Post Planner Queue</h4>
             <p className="text-[11px] text-slate-400 mt-0.5">Posts saved or waiting to broadcast to channels</p>
           </div>
           <button 

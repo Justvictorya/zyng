@@ -1363,7 +1363,7 @@ export default function ViewCreatePost() {
               <div className="space-y-4 animate-fade-in text-xs">
                 <div className="space-y-1">
                   <span className="text-[10px] font-mono text-emerald-400 font-bold block uppercase">Viral Link Blueprint Hook</span>
-                  <p className="text-xs text-slate-400">Paste any viral Instagram, Twitter, or TikTok url. AI extracts the underlying hook & creates exactly 5 custom localized campaign drafts!</p>
+                  <p className="text-xs text-slate-400">Paste any viral Instagram, Twitter, or TikTok url. AI extracts the underlying hook & creates exactly 5 custom localized drafts!</p>
                 </div>
 
                 <div className="space-y-2">

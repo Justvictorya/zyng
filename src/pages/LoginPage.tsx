@@ -162,7 +162,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center text-xs text-slate-500 pt-2 selection:bg-none">
-          Don't have a social campaign yet?{" "}
+          Don't have an account yet?{" "}
           <Link to="/signup" className="text-indigo-400 hover:underline font-semibold">Join free beta</Link>
         </div>
       </div>

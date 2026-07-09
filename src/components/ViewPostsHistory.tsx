@@ -128,7 +128,7 @@ export default function ViewPostsHistory() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
         <div>
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
-            Social Campaign Calendar Ledger
+            Social Media Calendar Ledger
           </h3>
           <p className="text-xs text-slate-400 mt-1">
             Total of {posts.length} actions logged in database. Connects real-time to active broadcast channels.
@@ -156,7 +156,7 @@ export default function ViewPostsHistory() {
           <History className="h-10 w-10 text-slate-600 mx-auto mb-3" />
           <h4 className="text-sm font-semibold text-slate-300">No posts in active ledger yet!</h4>
           <p className="text-xs text-slate-500 mt-1">
-            Create a campaign post first and set a cross-posting channel to populate this ledger database.
+            Create a post first and set a cross-posting channel to populate this ledger database.
           </p>
         </div>
       ) : (
