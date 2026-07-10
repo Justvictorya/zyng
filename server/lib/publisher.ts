@@ -243,17 +243,23 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return r.json();
+    return { status: r.status, body: await r.json() };
   };
 
-  let data = await postTweet(account.access_token);
-  if (data.errors?.[0]?.code === 89 || data.status === 401) {
+  let { status, body: data } = await postTweet(account.access_token);
+  if (status === 401 || data.title === "Unauthorized") {
     const refreshed = await refreshToken("twitter", account);
-    if (refreshed) data = await postTweet(refreshed);
+    if (refreshed) {
+      const res = await postTweet(refreshed);
+      status = res.status;
+      data = res.body;
+    }
   }
 
-  if (data.errors) return { platform: "twitter", success: false, error: data.errors[0]?.message };
-  return { platform: "twitter", success: true, postId: data.data?.id };
+  if (status !== 201 || !data?.data?.id) {
+    return { platform: "twitter", success: false, error: data?.detail || data?.errors?.[0]?.detail || data?.title || "Unknown Twitter API error" };
+  }
+  return { platform: "twitter", success: true, postId: data.data.id };
 }
 
 async function publishToLinkedIn(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
