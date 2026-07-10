@@ -127,10 +127,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 md:px-8 py-14 bg-[#050507] font-sans" id="login-screen">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen flex items-center justify-center px-4 md:px-8 py-8 sm:py-14 bg-[#050507] font-sans" id="login-screen">
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none hidden sm:block"></div>
 
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-6 shadow-xl relative z-10">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 space-y-6 shadow-xl relative z-10">
         <div className="text-center space-y-2">
           <span className="text-[10px] text-indigo-400 font-bold font-mono tracking-widest uppercase">Secure Authentication Gateway</span>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100 font-sans">Welcome back to Zyng</h2>
@@ -180,7 +180,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {platforms.map((p) => (
               <button key={p.id} onClick={() => initiateSocialLogin(p)} className="flex items-center justify-center gap-2 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl py-2.5 px-3 transition-colors cursor-pointer group" title={p.title}>
                 {icons[p.id]}
