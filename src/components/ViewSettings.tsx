@@ -363,7 +363,7 @@ export default function ViewSettings() {
   };
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in text-slate-200" id="zyng-view-settings">
+    <div className="p-4 sm:p-8 space-y-8 animate-fade-in text-slate-200" id="zyng-view-settings">
       
       {/* 1. Profile */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">

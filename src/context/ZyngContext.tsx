@@ -21,7 +21,7 @@ async function ensureValidToken(): Promise<string | null> {
   if (!token) return null;
   if (!isTokenExpired(token)) return token;
 
-  // Token expired — try refreshing via Supabase auth endpoint
+  // Token expired — try refreshing via auth endpoint
   if (refreshToken) {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

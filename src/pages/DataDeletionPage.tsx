@@ -1,6 +1,6 @@
 export default function DataDeletionPage() {
   return (
-    <div className="min-h-screen bg-[#050507] text-slate-200 p-8">
+    <div className="min-h-screen bg-[#050507] text-slate-200 p-5 sm:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white">Z</div>

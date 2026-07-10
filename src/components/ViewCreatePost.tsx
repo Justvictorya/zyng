@@ -557,7 +557,7 @@ export default function ViewCreatePost() {
   };
 
   return (
-    <div className="p-8 grid grid-cols-1 lg:grid-cols-12 gap-8" id="zyng-view-create-post">
+    <div className="p-4 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8" id="zyng-view-create-post">
       
       {/* SUCCESS & ERROR OVERLAYS ENVELOPE */}
       {successMessage && (
@@ -642,7 +642,7 @@ export default function ViewCreatePost() {
               <p className="text-[10px] text-slate-600 mt-1">Max 20 files, files over 50MB auto-chunked</p>
             </div>
             {mediaPreviews.length > 0 && (
-              <div className="grid grid-cols-5 gap-2 mt-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
                 {mediaPreviews.map((preview, i) => (
                   <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-800">
                     {selectedFiles[i]?.type.startsWith("video/") ? (
@@ -1010,7 +1010,7 @@ export default function ViewCreatePost() {
           </div>
 
           {/* Sub tab buttons for the 5 utilities */}
-          <div className="grid grid-cols-5 border-b border-slate-850/50 bg-slate-950/40 text-[10px] uppercase font-bold tracking-tight font-mono text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-5 border-b border-slate-850/50 bg-slate-950/40 text-[10px] uppercase font-bold tracking-tight font-mono text-center">
             
             <button 
               onClick={() => setActiveCopilotTab("caption")}

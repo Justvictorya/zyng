@@ -46,10 +46,10 @@ export default function ViewDashboard() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in p-8" id="zyng-view-dashboard">
+    <div className="space-y-8 animate-fade-in p-4 sm:p-8" id="zyng-view-dashboard">
       
       {/* 1. Personalized Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-950/40 via-[#050507] to-black border border-purple-500/20 p-8 shadow-2xl backdrop-blur-md">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-950/40 via-[#050507] to-black border border-purple-500/20 p-5 md:p-8 shadow-2xl backdrop-blur-md">
         <div className="absolute top-0 right-0 h-40 w-40 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-1/3 h-24 w-60 bg-indigo-500/10 rounded-full blur-3xl"></div>
         

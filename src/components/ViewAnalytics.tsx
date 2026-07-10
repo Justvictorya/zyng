@@ -163,7 +163,7 @@ export default function ViewAnalytics() {
   }
 
   return (
-    <div className="p-8 space-y-8 animate-fade-in text-slate-200" id="zyng-view-analytics">
+    <div className="p-4 sm:p-8 space-y-8 animate-fade-in text-slate-200" id="zyng-view-analytics">
       <div className="flex items-center justify-between">
         <div />
         <button
@@ -174,7 +174,7 @@ export default function ViewAnalytics() {
           Export CSV
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md shadow-black/10">
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-400">Total Posts</span>

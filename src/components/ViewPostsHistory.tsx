@@ -122,7 +122,7 @@ export default function ViewPostsHistory() {
   };
 
   return (
-    <div className="p-8 space-y-6 animate-fade-in" id="zyng-view-posts-history">
+    <div className="p-4 sm:p-8 space-y-6 animate-fade-in" id="zyng-view-posts-history">
       
       {/* Table header indicators */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
@@ -149,7 +149,7 @@ export default function ViewPostsHistory() {
       {isLoading ? (
         <div className="text-center py-20 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-          <span className="text-xs text-slate-400 font-sans">Connecting to Supabase Local Proxy Ledger...</span>
+          <span className="text-xs text-slate-400 font-sans">Connecting to Zyng Local Proxy Ledger...</span>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-24 bg-slate-900 border border-slate-850 border-dashed rounded-2xl">
@@ -230,7 +230,7 @@ export default function ViewPostsHistory() {
                           className="px-3 py-1.5 border border-slate-800 text-slate-400 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
                         >
                           <X className="h-3 w-3" />
-                          <span>Cancel</span>
+                          <span className="hidden sm:inline">Cancel</span>
                         </button>
                         <button
                           onClick={() => handleSaveInlineEdit(post.id)}
@@ -320,7 +320,7 @@ export default function ViewPostsHistory() {
                   </div>
 
                   {!isEditing && (
-                    <div className="flex gap-2 justify-end shrink-0">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-end shrink-0">
                       {post.status !== "published" && (
                         <button
                           onClick={() => handlePublishNow(post)}
@@ -334,7 +334,7 @@ export default function ViewPostsHistory() {
                           ) : (
                             <Send className="h-3.5 w-3.5" />
                           )}
-                          <span>Publish Now</span>
+                          <span className="hidden sm:inline">Publish Now</span>
                         </button>
                       )}
                       <button
@@ -344,7 +344,7 @@ export default function ViewPostsHistory() {
                         id={`stats-btn-${post.id}`}
                       >
                         <BarChart2 className="h-3.5 w-3.5" />
-                        <span>Stats</span>
+                          <span className="hidden sm:inline">Stats</span>
                       </button>
                       <button
                         onClick={() => handleStartEdit(post)}
@@ -353,7 +353,7 @@ export default function ViewPostsHistory() {
                         id={`edit-btn-${post.id}`}
                       >
                         <Edit3 className="h-3.5 w-3.5" />
-                        <span>Edit</span>
+                          <span className="hidden sm:inline">Edit</span>
                       </button>
 
                       <button

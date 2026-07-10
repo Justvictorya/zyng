@@ -85,7 +85,7 @@ export default function ViewPostAnalytics() {
   const status = post.status;
 
   return (
-    <div className="p-8 space-y-6 animate-fade-in max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 space-y-6 animate-fade-in max-w-4xl mx-auto">
       {/* Back button */}
       <button onClick={() => navigate("/dashboard/posts")} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer">
         <ArrowLeft className="h-4 w-4" />
