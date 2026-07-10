@@ -64,10 +64,10 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       <aside
         className={`
           w-64 bg-black/40 backdrop-blur-md border-r border-white/10 flex flex-col justify-between
-          text-slate-200 shrink-0 h-screen sticky top-0
+          text-slate-200 shrink-0 h-screen
           transition-transform duration-300 ease-in-out z-50
           ${open ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:sticky lg:z-auto
+          fixed lg:sticky top-0 lg:translate-x-0 lg:z-auto
         `}
         id="zyng-sidebar"
       >
