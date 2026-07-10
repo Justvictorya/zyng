@@ -175,6 +175,8 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+export { ensureValidToken };
+
 export function useZyng(): ZyngContextValue {
   const ctx = useContext(ZyngContext);
   if (!ctx) throw new Error("useZyng must be used within ZyngProvider");

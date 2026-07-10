@@ -35,7 +35,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Post, AIResponse, AIFixerResponse, AIFlagResponse, AIViralResponse } from "../types";
 import { translations } from "../lib/translations";
-import { useZyng } from "../context/ZyngContext";
+import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 export default function ViewCreatePost() {
   const { dialect, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
@@ -379,11 +379,12 @@ export default function ViewCreatePost() {
 
   const postDraft = async (draft: {id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string}) => {
     setIsSaving(true);
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
+    if (!token) { setErrorMessage("Session expired. Please log in again."); setIsSaving(false); return; }
     try {
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           caption: draft.caption,
           platforms: draft.platforms,
@@ -408,8 +409,9 @@ export default function ViewCreatePost() {
 
   // Upload a single file (chunked if > 50MB)
   const uploadSingleFile = async (file: File): Promise<string> => {
-    const token = localStorage.getItem("zyng_token");
-    const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+    const token = await ensureValidToken();
+    if (!token) throw new Error("Session expired");
+    const authHeader = { Authorization: `Bearer ${token}` };
 
     // Files under 50MB use simple upload
     if (file.size <= 50 * 1024 * 1024) {
@@ -511,10 +513,11 @@ export default function ViewCreatePost() {
         }
       }
 
-      const token = localStorage.getItem("zyng_token");
+      const token = await ensureValidToken();
+      if (!token) { setErrorMessage("Session expired. Please log in again."); setIsSaving(false); return; }
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(body)
       });
       
