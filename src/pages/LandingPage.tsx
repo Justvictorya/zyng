@@ -41,7 +41,7 @@ export default function LandingPage() {
           <button onClick={() => navigate("/login")} className="w-full sm:w-auto border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-900/20 text-xs font-semibold px-8 py-4 rounded-xl transition-all cursor-pointer">Log In to Dashboard</button>
         </div>
 
-        <div className="pt-12 grid grid-cols-7 gap-6 justify-center items-center opacity-70">
+        <div className="pt-12 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-4 sm:gap-6 justify-center items-center opacity-70">
           {["Facebook", "Instagram", "YouTube", "WhatsApp Status", "TikTok", "LinkedIn", "X / Twitter"].map(p => (
             <span key={p} className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{p}</span>
           ))}
