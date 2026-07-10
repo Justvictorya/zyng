@@ -295,9 +295,11 @@ export default function ViewPostsHistory() {
                       <Clock className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
                       <span>Broadcast Target:</span>
                       <span className="text-slate-300 font-mono font-medium">
-                        {new Date(post.schedule_time).toLocaleDateString("en-US", {
-                          weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                        })} WAT
+                        {post.schedule_time
+                          ? new Date(post.schedule_time).toLocaleDateString("en-US", {
+                              weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+                            }) + " WAT"
+                          : "Not set"}
                       </span>
                     </div>
                     {post.platform_schedule && (() => {

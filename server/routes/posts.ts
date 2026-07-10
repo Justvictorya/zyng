@@ -81,7 +81,8 @@ router.post("/", async (req: Request, res: Response) => {
       user_id: userId,
       caption,
       platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
-      schedule_time: schedule_time || new Date(Date.now() + 3600000).toISOString(),
+      schedule_time: (schedule_time && schedule_time.length > 0) ? schedule_time : new Date(Date.now() + 3600000).toISOString(),
+      status: "scheduled",
     };
     if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
     if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
