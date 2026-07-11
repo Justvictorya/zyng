@@ -295,7 +295,7 @@ export default function ViewDashboard() {
                   <div className="text-right shrink-0">
                     <span className="text-[10px] font-mono text-slate-500 block">BROADCAST DATES</span>
                     <span className="text-xs text-slate-300 font-medium font-sans mt-1 block">
-                      {post.schedule_time
+                      {post.schedule_time && new Date(post.schedule_time).getTime() > 86400000
                         ? new Date(post.schedule_time).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
