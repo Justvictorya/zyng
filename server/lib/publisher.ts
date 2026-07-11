@@ -248,18 +248,28 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
   };
 
   let { status, body: data } = await postTweet(account.access_token);
+  console.log(`[Twitter] Attempt post with stored token — status: ${status}, response:`, JSON.stringify(data));
+
   if (status === 401 || data.title === "Unauthorized") {
+    console.log("[Twitter] Token expired, attempting refresh...");
     const refreshed = await refreshToken("twitter", account);
     if (refreshed) {
+      console.log("[Twitter] Token refreshed, retrying post...");
       const res = await postTweet(refreshed);
       status = res.status;
       data = res.body;
+      console.log(`[Twitter] Retry post — status: ${status}, response:`, JSON.stringify(data));
+    } else {
+      console.log("[Twitter] Token refresh failed — no refresh_token or refresh endpoint rejected");
     }
   }
 
   if (status !== 201 || !data?.data?.id) {
-    return { platform: "twitter", success: false, error: data?.detail || data?.errors?.[0]?.detail || data?.title || "Unknown Twitter API error" };
+    const err = data?.detail || data?.errors?.[0]?.detail || data?.title || "Unknown Twitter API error";
+    console.error(`[Twitter] Publish failed — status: ${status}, error: ${err}`);
+    return { platform: "twitter", success: false, error: err };
   }
+  console.log(`[Twitter] Publish success — tweet id: ${data.data.id}`);
   return { platform: "twitter", success: true, postId: data.data.id };
 }
 

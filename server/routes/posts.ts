@@ -102,13 +102,17 @@ router.post("/", async (req: Request, res: Response) => {
 
     const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
 
+    let publishResults: any[] | null = null;
     if (platformList.length > 0) {
-      publishPost(data.id, userId, caption, platformList, urls, platform_captions)
-        .then((results) => recordPublishResults(data.id, results))
-        .catch((err) => console.error(`[Publisher] Post ${data.id} publish error:`, err));
+      try {
+        publishResults = await publishPost(data.id, userId, caption, platformList, urls, platform_captions);
+        recordPublishResults(data.id, publishResults);
+      } catch (err: any) {
+        console.error(`[Publisher] Post ${data.id} publish error:`, err);
+      }
     }
 
-    return res.json({ success: true, post: { ...data, media_urls: JSON.stringify(urls) } });
+    return res.json({ success: true, post: { ...data, media_urls: JSON.stringify(urls) }, publishResults });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

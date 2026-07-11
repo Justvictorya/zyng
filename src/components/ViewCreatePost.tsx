@@ -386,7 +386,14 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         deleteDraft(draft.id);
-        setSuccessMessage("Draft posted successfully!");
+        let msg = "Draft posted successfully!";
+        if (data.publishResults) {
+          const failed = data.publishResults.filter((r: any) => !r.success);
+          if (failed.length > 0) {
+            msg += " — " + failed.map((r: any) => `${r.platform}: ${r.error}`).join("; ");
+          }
+        }
+        setSuccessMessage(msg);
         setTimeout(() => { setSuccessMessage(""); loadPosts(); navigate("/dashboard/posts"); }, 1500);
       } else {
         throw new Error(data.error);
@@ -515,7 +522,14 @@ export default function ViewCreatePost() {
       
       const data = await res.json();
       if (data.success) {
-        setSuccessMessage(t.postSaved);
+        let msg = t.postSaved;
+        if (data.publishResults) {
+          const failed = data.publishResults.filter((r: any) => !r.success);
+          if (failed.length > 0) {
+            msg += " — " + failed.map((r: any) => `${r.platform}: ${r.error}`).join("; ");
+          }
+        }
+        setSuccessMessage(msg);
         setCaption("");
         setPlatformCaptions({});
         setEditingPlatformCaption(null);
