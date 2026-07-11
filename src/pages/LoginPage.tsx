@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, RefreshCw, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useZyng } from "../context/ZyngContext";
 import { supabase } from "../lib/supabase-client";
 
@@ -12,6 +12,46 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // password recovery state
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("type=recovery")) {
+      setIsRecovery(true);
+      setError("");
+    }
+  }, []);
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+    try {
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const accessToken = params.get("access_token");
+      if (!accessToken) { setError("Invalid reset link"); setIsLoading(false); return; }
+
+      await supabase.auth.setSession({ access_token: accessToken, refresh_token: params.get("refresh_token") || "" });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) { setError(error.message); setIsLoading(false); return; }
+
+      setRecoverySuccess(true);
+      setTimeout(() => {
+        window.location.hash = "";
+        setIsRecovery(false);
+        navigate("/login");
+      }, 2000);
+    } catch { setError("Failed to update password"); }
+    setIsLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +181,24 @@ export default function LoginPage() {
           <div className="bg-rose-950 border border-rose-500/40 text-rose-300 text-xs px-4 py-3 rounded-xl font-medium">{error}</div>
         )}
 
+        {recoverySuccess && (
+          <div className="bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-3 rounded-xl font-medium">Password updated successfully! Redirecting to login...</div>
+        )}
+
+        {isRecovery ? (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">New Password</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Enter new password" />
+              </div>
+            </div>
+            <button onClick={handleUpdatePassword} disabled={isLoading} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold py-3 rounded-xl shadow-lg text-xs cursor-pointer">
+              {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mx-auto" /> : "Update Password"}
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Email address</label>
@@ -169,6 +227,7 @@ export default function LoginPage() {
             <span>Authenticate Credentials</span>
           </button>
         </form>
+        )}
 
         <div className="space-y-2 mt-4">
           <div className="relative">
