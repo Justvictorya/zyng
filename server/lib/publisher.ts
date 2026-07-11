@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase, serviceDb } from "./supabase";
 import { env } from "../config/env";
 
 interface PublishResult {
@@ -18,9 +18,10 @@ export async function publishPost(
 ): Promise<PublishResult[]> {
   const results: PublishResult[] = [];
 
-  const { data: accounts } = await supabase.rpc("get_connected_accounts", {
-    p_user_id: userId,
-  });
+  const { data: accounts } = await serviceDb
+    .from("connected_accounts")
+    .select("*")
+    .eq("user_id", userId);
 
   const connected = (accounts as any[] || []).filter((a: any) =>
     platforms.includes(a.platform)
