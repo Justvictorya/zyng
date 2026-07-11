@@ -176,15 +176,7 @@ export default function ViewCreatePost() {
     }
   }, [triggerDraftRecoverSignal]);
 
-  // Set default schedule time (2 hours from now)
-  useEffect(() => {
-    const now = new Date();
-    now.setHours(now.getHours() + 2);
-    // Format to local input string 'YYYY-MM-DDTHH:MM'
-    const offset = now.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(now.getTime() - offset).toISOString().substring(0, 16);
-    setScheduleTime(localISOTime);
-  }, []);
+  // No default schedule time — empty means publish immediately
 
   // Platform selector options with active style helpers
   const platformOptions = [
@@ -388,7 +380,7 @@ export default function ViewCreatePost() {
         body: JSON.stringify({
           caption: draft.caption,
           platforms: draft.platforms,
-          schedule_time: draft.scheduleTime || new Date(Date.now() + 3600000).toISOString()
+          schedule_time: draft.scheduleTime || new Date().toISOString()
         })
       });
       const data = await res.json();
@@ -497,7 +489,7 @@ export default function ViewCreatePost() {
         caption,
         platforms: selectedPlatforms,
         media_urls: urls,
-        schedule_time: scheduleTime || new Date(Date.now() + 3600000).toISOString(),
+        schedule_time: scheduleTime || new Date().toISOString(),
       };
       const customCaptions = Object.fromEntries(
         Object.entries(platformCaptions).filter(([, v]: [string, string]) => v.trim())
@@ -532,11 +524,7 @@ export default function ViewCreatePost() {
         setSelectedFiles([]);
         setMediaPreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
         setMediaUrls([]);
-        const now = new Date();
-        now.setHours(now.getHours() + 2);
-        const offset = now.getTimezoneOffset() * 60000;
-        const localISOTime = new Date(now.getTime() - offset).toISOString().substring(0, 16);
-        setScheduleTime(localISOTime);
+        setScheduleTime("");
         
         localStorage.removeItem("zyng_nepa_draft");
         setNepaDraftActive(false);
