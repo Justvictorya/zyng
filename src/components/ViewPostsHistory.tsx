@@ -78,16 +78,25 @@ export default function ViewPostsHistory() {
 
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
+  const [publishError, setPublishError] = useState<string | null>(null);
+
   const handlePublishNow = async (post: Post) => {
     setPublishingId(post.id);
+    setPublishError(null);
     try {
       const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST", headers: authHeaders() });
       const data = await res.json();
       if (data.success) {
+        const failed = data.results?.filter((r: any) => !r.success);
+        if (failed?.length > 0) {
+          setPublishError(failed.map((r: any) => `${r.platform}: ${r.error}`).join("; "));
+        }
         triggerRefresh();
+      } else {
+        setPublishError(data.error || "Publish failed");
       }
-    } catch (e) {
-      console.error("Failed to publish now:", e);
+    } catch (e: any) {
+      setPublishError(e.message || "Failed to publish now");
     } finally {
       setPublishingId(null);
     }

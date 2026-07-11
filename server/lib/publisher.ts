@@ -23,6 +23,12 @@ export async function publishPost(
     .select("*")
     .eq("user_id", userId);
 
+  if (!accounts || accounts.length === 0) {
+    console.error(`[Publisher] No connected accounts found for user ${userId}`);
+  } else {
+    console.log(`[Publisher] Found ${accounts.length} accounts for user:`, accounts.map((a: any) => a.platform));
+  }
+
   const connected = (accounts as any[] || []).filter((a: any) =>
     platforms.includes(a.platform)
   );
@@ -138,7 +144,9 @@ async function refreshToken(platform: string, account: any): Promise<string | nu
       headers,
       body: new URLSearchParams(body),
     });
-    const data = await res.json();
+    const bodyText = await res.text();
+    let data: any;
+    try { data = JSON.parse(bodyText); } catch { data = { raw: bodyText }; }
     if (data.access_token) {
       await supabase
         .from("connected_accounts")
@@ -152,8 +160,9 @@ async function refreshToken(platform: string, account: any): Promise<string | nu
         .eq("id", account.id);
       return data.access_token;
     }
+    console.warn(`[Publisher] Token refresh failed for ${platform}:`, JSON.stringify(data));
   } catch (e) {
-    console.warn(`[Publisher] Token refresh failed for ${platform}:`, e);
+    console.warn(`[Publisher] Token refresh error for ${platform}:`, e);
   }
   return null;
 }
