@@ -31,6 +31,7 @@ async function checkDuePosts() {
       .from("posts")
       .select("*")
       .lt("schedule_time", now)
+      .is("publish_results", null)
       .limit(50);
 
     if (error) {

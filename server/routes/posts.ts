@@ -239,7 +239,7 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
     try {
       await serviceDb
         .from("posts")
-        .update({ schedule_time: "2099-01-01T00:00:00Z" })
+        .update({ publish_results: JSON.stringify(results) })
         .eq("id", post.id);
     } catch (e) {
       console.error(`[Posts] Failed to mark post ${post.id} as processed:`, e);
