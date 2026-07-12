@@ -176,7 +176,9 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
   if (!clientId) return res.status(500).json({ success: false, error: `${platform} OAuth not configured` });
 
   try {
-    const redirectUri = platform === "instagram"
+    const redirectUri = platform === "tiktok"
+      ? `${req.protocol}://${req.get("host")}/api/v1/oauth/tiktok/callback`
+      : platform === "instagram"
       ? `${req.protocol}://${req.get("host")}/auth/callback?provider=instagram`
       : `${req.protocol}://${req.get("host")}/auth/callback?provider=${platform}`;
 

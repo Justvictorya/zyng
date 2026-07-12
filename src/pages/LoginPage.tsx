@@ -170,10 +170,12 @@ export default function LoginPage() {
       window.location.href = `https://api.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user_profile&response_type=code&state=${csrfState}`;
     } else if (p.id === "tiktok") {
       const clientId = import.meta.env.VITE_TIKTOK_CLIENT_ID;
-      const redirectUri = `${window.location.origin}/auth/callback?provider=tiktok`;
+      const redirectUri = `${window.location.origin}/api/v1/oauth/tiktok/callback`;
       const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       localStorage.setItem("tiktok_code_verifier", codeVerifier);
+      localStorage.setItem("current_oauth_provider", "tiktok");
+      localStorage.setItem(`${p.id}_login_state`, csrfState);
       window.location.href = `https://www.tiktok.com/v2/auth/authorize?client_key=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("user.info.basic")}&response_type=code&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     }
   }

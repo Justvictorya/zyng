@@ -164,12 +164,13 @@ export default function SignupPage() {
                   window.location.href = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("tweet.read users.read offline.access")}&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
                 } else if (p.id === "tiktok") {
                   const clientId = import.meta.env.VITE_TIKTOK_CLIENT_ID;
-                  const redirectUri = `${window.location.origin}/auth/callback?provider=tiktok`;
+                  const redirectUri = `${window.location.origin}/api/v1/oauth/tiktok/callback`;
                   const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
                   const verifierData = new TextEncoder().encode(codeVerifier);
                   const verifierDigest = await crypto.subtle.digest("SHA-256", verifierData);
                   const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(verifierDigest))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
                   localStorage.setItem("tiktok_code_verifier", codeVerifier);
+                  localStorage.setItem("current_oauth_provider", "tiktok");
                   window.location.href = `https://www.tiktok.com/v2/auth/authorize?client_key=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent("user.info.basic")}&response_type=code&state=${csrfState}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
                 } else if (p.id === "instagram") {
                   const clientId = import.meta.env.VITE_INSTAGRAM_CLIENT_ID;
