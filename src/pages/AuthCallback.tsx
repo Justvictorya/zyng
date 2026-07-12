@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase-client";
 import { useZyng } from "../context/ZyngContext";
 import { Loader2 } from "lucide-react";
 
-const CUSTOM_OAUTH_PROVIDERS = ["linkedin", "twitter", "instagram", "tiktok"];
+const CUSTOM_OAUTH_PROVIDERS = ["linkedin", "twitter", "instagram", "tiktok", "google"];
 
 export default function AuthCallback() {
   const { setCurrentUser } = useZyng();

@@ -246,6 +246,11 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       platformUserName = parsed.platformUserName;
 
       switch (platform) {
+        case "google":
+          email = profileData.email || `google_${platformUserId}@zyng.app`;
+          name = platformUserName || profileData.name || "Google User";
+          avatar = profileData.picture || "";
+          break;
         case "linkedin":
           email = profileData.email || `linkedin_${platformUserId}@zyng.app`;
           name = platformUserName || "LinkedIn User";

@@ -73,6 +73,15 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     profileUrl: "https://graph.facebook.com/me?fields=id,name",
     profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
   },
+  google: {
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    clientIdEnv: "GOOGLE_CLIENT_ID",
+    clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+    scope: "openid email profile",
+    profileUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+    profileParser: (data: any) => ({ platformUserId: data.id, platformUserName: data.name }),
+  },
   youtube: {
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
