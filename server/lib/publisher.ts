@@ -43,13 +43,16 @@ export async function publishPost(
     const caption = platformCaptions?.[platform] || defaultCaption;
 
     try {
+      console.log(`[Publisher] Publishing to ${platform}...`);
       const result = await publishToPlatform(platform, account, caption, mediaUrls);
       results.push(result);
     } catch (err: any) {
+      console.error(`[Publisher] ${platform} error:`, err.message);
       results.push({ platform, success: false, error: err.message });
     }
   }
 
+  console.log(`[Publisher] Done — results:`, JSON.stringify(results));
   return results;
 }
 

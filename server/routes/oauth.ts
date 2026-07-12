@@ -276,7 +276,7 @@ router.delete("/accounts/:platform", requireAuth, async (req: Request, res: Resp
 
   const { platform } = req.params;
 
-  const { error } = await supabase
+  const { error } = await serviceDb
     .from("connected_accounts")
     .delete()
     .eq("user_id", userId)
