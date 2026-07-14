@@ -90,23 +90,36 @@ export default function LoginPage() {
     }
   };
 
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [showResetNewPassword, setShowResetNewPassword] = useState(false);
+
   const handleForgotPassword = async () => {
-    const email = window.prompt("Enter your email to receive a password reset link:");
-    if (!email) return;
-    setError("");
+    setShowResetForm(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail || !resetNewPassword || resetNewPassword.length < 6) {
+      setError("Enter a valid email and password (min 6 chars)");
+      return;
+    }
     setIsLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: resetEmail, newPassword: resetNewPassword }),
       });
       const data = await res.json();
       if (data.success) {
-        setError(""); // clear any previous error
-        alert("Password reset link sent! Check your email.");
+        alert("Password updated! You can now log in with your new password.");
+        setShowResetForm(false);
+        setEmail(resetEmail);
+        setPassword(resetNewPassword);
       } else {
-        setError(data.error || "Failed to send reset email");
+        setError(data.error || "Failed to reset password");
       }
     } catch {
       setError("Failed to connect to authentication server.");
@@ -203,7 +216,36 @@ export default function LoginPage() {
           <div className="bg-emerald-950 border border-emerald-500/40 text-emerald-300 text-xs px-4 py-3 rounded-xl font-medium">Password updated successfully! Redirecting to login...</div>
         )}
 
-        {isRecovery ? (
+        {showResetForm && (
+          <div className="space-y-4">
+            <h3 className="text-xs font-semibold text-slate-300">Reset Password</h3>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                <input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="you@example.com" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">New Password</label>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+                <input type={showResetNewPassword ? "text" : "password"} value={resetNewPassword} onChange={e => setResetNewPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-11 pr-10 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono" placeholder="New password" />
+                <button type="button" onClick={() => setShowResetNewPassword(!showResetNewPassword)} className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer">
+                  {showResetNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleResetPassword} disabled={isLoading} className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold py-3 rounded-xl text-xs cursor-pointer">
+                {isLoading ? <RefreshCw className="h-4 w-4 animate-spin mx-auto" /> : "Reset Password"}
+              </button>
+              <button onClick={() => setShowResetForm(false)} className="px-4 bg-slate-800 text-slate-300 rounded-xl text-xs cursor-pointer">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {!showResetForm && isRecovery ? (
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">New Password</label>

@@ -103,9 +103,26 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
 });
 
 router.post("/reset-password", authLimiter, async (req: Request, res: Response) => {
-  const { email } = req.body;
+  const { email, password, newPassword } = req.body;
   if (!email) return res.status(400).json({ success: false, error: "Email required" });
 
+  // If newPassword provided, do admin password reset (skips email verification)
+  if (newPassword) {
+    try {
+      const { data: users } = await adminAuth.listUsers();
+      const user = users.users.find((u: any) => u.email === email);
+      if (!user) return res.status(404).json({ success: false, error: "User not found" });
+
+      const { error } = await adminAuth.updateUserById(user.id, { password: newPassword });
+      if (error) return res.status(400).json({ success: false, error: error.message });
+
+      return res.json({ success: true, message: "Password updated!" });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // Old flow: send Supabase reset email
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${req.protocol}://${req.get("host")}/login`,

@@ -30,6 +30,9 @@ BEGIN
 END;
 $$;
 
+-- See supabase-migration-refresh-token.sql for the updated version
+-- that also accepts p_refresh_token and stores refresh_token column
+
 -- Get all connected accounts for a user
 CREATE OR REPLACE FUNCTION get_connected_accounts(
   p_user_id UUID

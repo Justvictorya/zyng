@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { UserProfile, Post, DialectType } from "../types";
+import { supabase } from "../lib/supabase-client";
 
 function decodeJwt(token: string): any {
   try {
@@ -90,13 +91,35 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   const [nepaDraftActive, setNepaDraftActive] = useState(false);
   const [triggerDraftRecoverSignal, setTriggerDraftRecoverSignal] = useState(false);
 
-  // Check token validity on mount
+  // Check token validity on mount and refresh proactively every 30 min
   useEffect(() => {
-    ensureValidToken().then((token) => {
-      if (!token && currentUser) {
+    const check = () =>
+      ensureValidToken().then((token) => {
+        if (!token && currentUser) {
+          setCurrentUser(null);
+        }
+      });
+    check();
+    const interval = setInterval(check, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Supabase onAuthStateChange — syncs token to localStorage automatically
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token) {
+        localStorage.setItem("zyng_token", session.access_token);
+        if (session.refresh_token) {
+          localStorage.setItem("zyng_refresh_token", session.refresh_token);
+        }
+      }
+      if (event === "SIGNED_OUT") {
+        localStorage.removeItem("zyng_token");
+        localStorage.removeItem("zyng_refresh_token");
         setCurrentUser(null);
       }
     });
+    return () => listener?.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
