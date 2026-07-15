@@ -339,6 +339,7 @@ export default function ViewCreatePost() {
       id: Date.now().toString(),
       caption,
       platforms: selectedPlatforms,
+      mediaUrls: mediaUrls.slice(), // copy current media urls
       platformCaptions,
       platformSchedule,
       perPlatformSchedule,
@@ -352,12 +353,13 @@ export default function ViewCreatePost() {
     setTimeout(() => setSuccessMessage(""), 2000);
   };
 
-  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; platformCaptions?: Record<string, string>; platformSchedule?: Record<string, string>; perPlatformSchedule?: boolean; scheduleTime: string; savedAt: string}) => {
+  const loadDraft = (draft: {id: string; caption: string; platforms: string[]; platformCaptions?: Record<string, string>; platformSchedule?: Record<string, string>; perPlatformSchedule?: boolean; scheduleTime: string; savedAt: string; mediaUrls?: string[]}) => {
     setCaption(draft.caption);
     setSelectedPlatforms(draft.platforms);
     if (draft.platformCaptions) setPlatformCaptions(draft.platformCaptions);
     if (draft.platformSchedule) setPlatformSchedule(draft.platformSchedule);
     if (draft.perPlatformSchedule !== undefined) setPerPlatformSchedule(draft.perPlatformSchedule);
+    if (draft.mediaUrls?.length) setMediaUrls(draft.mediaUrls);
     setScheduleTime(draft.scheduleTime);
     setSuccessMessage("Draft loaded into composer!");
     setTimeout(() => setSuccessMessage(""), 2000);
@@ -369,7 +371,7 @@ export default function ViewCreatePost() {
     localStorage.setItem("zyng_drafts", JSON.stringify(updated));
   };
 
-  const postDraft = async (draft: {id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string}) => {
+  const postDraft = async (draft: {id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string; mediaUrls?: string[]}) => {
     setIsSaving(true);
     const token = await ensureValidToken();
     if (!token) { setErrorMessage("Session expired. Please log in again."); setIsSaving(false); return; }
@@ -380,7 +382,8 @@ export default function ViewCreatePost() {
         body: JSON.stringify({
           caption: draft.caption,
           platforms: draft.platforms,
-          schedule_time: draft.scheduleTime || new Date().toISOString()
+          schedule_time: draft.scheduleTime || new Date().toISOString(),
+          media_urls: draft.mediaUrls || []
         })
       });
       const data = await res.json();
