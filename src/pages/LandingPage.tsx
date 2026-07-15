@@ -48,8 +48,13 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="text-center text-[11px] text-slate-600 font-mono relative z-10 shrink-0">
-        Subscription billing available. Powered by Gemini AI.
+      <footer className="text-center text-[11px] text-slate-600 font-mono relative z-10 shrink-0 space-y-2">
+        <p>Subscription billing available. Powered by Gemini AI.</p>
+        <p className="flex justify-center gap-4">
+          <a href="/terms" className="hover:text-slate-400 transition-colors">Terms of Service</a>
+          <a href="/privacy" className="hover:text-slate-400 transition-colors">Privacy Policy</a>
+          <a href="/data-deletion" className="hover:text-slate-400 transition-colors">Data Deletion</a>
+        </p>
       </footer>
     </div>
   );

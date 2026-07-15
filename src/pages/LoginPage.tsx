@@ -316,6 +316,14 @@ export default function LoginPage() {
           Don't have an account yet?{" "}
           <Link to="/signup" className="text-indigo-400 hover:underline font-semibold">Join free beta</Link>
         </div>
+
+        <div className="text-center text-[10px] text-slate-600 mt-6 space-x-3">
+          <a href="/terms" className="hover:text-slate-400 transition-colors">Terms</a>
+          <span className="text-slate-700">·</span>
+          <a href="/privacy" className="hover:text-slate-400 transition-colors">Privacy</a>
+          <span className="text-slate-700">·</span>
+          <a href="/data-deletion" className="hover:text-slate-400 transition-colors">Data Deletion</a>
+        </div>
       </div>
     </div>
   );
