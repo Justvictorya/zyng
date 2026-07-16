@@ -349,6 +349,7 @@ export default function ViewSettings() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      console.log("[Disconnect] response:", data);
       if (data.success) {
         setLinkedAccounts(prev => {
           const next = new Set(prev);
@@ -356,6 +357,8 @@ export default function ViewSettings() {
           return next;
         });
         showToast(`Disconnected from ${networkId}`, "success");
+      } else {
+        showToast(`Disconnect failed: ${data.error}`, "error");
       }
     } catch (e) {
       console.error("Failed to disconnect", e);
