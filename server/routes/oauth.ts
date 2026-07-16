@@ -175,21 +175,35 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     const { platformUserId, platformUserName } = cfg.profileParser(profileData);
 
     if (platform === "instagram") {
-      // For Instagram through Business app, also save the Facebook connection
-      // and try to find Instagram Business Account from user's pages
       let igUserId = platformUserId;
       let igUserName = platformUserName;
 
       try {
-        const pagesRes = await fetch(
-          "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,instagram_business_account{id,username}",
+        // First check user-level instagram_business_account field
+        const userRes = await fetch(
+          "https://graph.facebook.com/v22.0/me?fields=id,name,instagram_business_account{id,username}",
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
-        const pagesData = await pagesRes.json();
-        const page = pagesData.data?.[0];
-        if (page?.instagram_business_account) {
-          igUserId = page.instagram_business_account.id;
-          igUserName = page.instagram_business_account.username;
+        const userData = await userRes.json();
+        if (userData?.instagram_business_account?.id) {
+          igUserId = userData.instagram_business_account.id;
+          igUserName = userData.instagram_business_account.username;
+          console.log("[OAuth] Found IG account from user profile:", igUserId, igUserName);
+        } else {
+          // Fall back to checking pages
+          const pagesRes = await fetch(
+            "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,instagram_business_account{id,username}",
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const pagesData = await pagesRes.json();
+          const page = pagesData.data?.find((p: any) => p.instagram_business_account);
+          if (page?.instagram_business_account) {
+            igUserId = page.instagram_business_account.id;
+            igUserName = page.instagram_business_account.username;
+            console.log("[OAuth] Found IG account from page:", igUserId, igUserName);
+          } else {
+            console.warn("[OAuth] No Instagram Business Account found in user or pages. userData:", JSON.stringify(userData));
+          }
         }
       } catch (e) {
         console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
