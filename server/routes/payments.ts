@@ -91,10 +91,22 @@ router.post("/verify", async (req: Request, res: Response) => {
 
     const secretKey = getPaystackSecret();
     if (!secretKey) {
+      if (userId) {
+        await adminAuth.updateUserById(userId, {
+          user_metadata: {
+            tier: "Pro",
+            subscription_status: "active",
+            subscription_plan: "Pro",
+            subscription_reference: reference || "test_mode",
+            subscription_updated_at: new Date().toISOString(),
+          },
+        });
+      }
       return res.status(200).json({
         success: true,
         test_mode: true,
-        message: "Paystack not configured — simulating successful payment.",
+        plan: "Pro",
+        message: "Paystack not configured — upgraded to Pro in test mode.",
       });
     }
 

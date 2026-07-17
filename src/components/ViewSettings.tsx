@@ -168,6 +168,12 @@ export default function ViewSettings() {
       }
 
       if (data.test_mode) {
+        // Persist to server DB even in test mode
+        await fetch("/api/payments/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ reference: "test_mode", userId: user.id }),
+        });
         onUserUpdate({ tier: plan });
         setActivePlan(plan);
         showToast(`Switched to ${plan} (test mode — set Paystack keys for real payments)`, "success");
