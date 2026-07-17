@@ -286,33 +286,36 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
 }
 
 async function publishToLinkedIn(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
-  const postLi = async (token: string) => {
+  const postLi = async (token: string, assetUrns: string[]) => {
+    const body: any = {
+      author: `urn:li:person:${account.platform_user_id}`,
+      lifecycleState: "PUBLISHED",
+      specificContent: {
+        "com.linkedin.ugc.ShareContent": {
+          shareCommentary: { text: caption },
+          shareMediaCategory: assetUrns.length > 0 ? "IMAGE" : "NONE",
+          media: assetUrns.map((urn) => ({ status: "READY", media: urn })),
+        },
+      },
+      visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
+    };
     const r = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-Restli-Protocol-Version": "2.0.0" },
-      body: JSON.stringify({
-        author: `urn:li:person:${account.platform_user_id}`,
-        lifecycleState: "PUBLISHED",
-        specificContent: {
-          "com.linkedin.ugc.ShareContent": {
-            shareCommentary: { text: caption },
-            shareMediaCategory: mediaUrls.length > 0 ? "IMAGE" : "NONE",
-            media: mediaUrls.map((url) => ({ status: "READY", media: url })),
-          },
-        },
-        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
-      }),
+      body: JSON.stringify(body),
     });
     return r.json();
   };
 
-  let data = await postLi(account.access_token);
+  let data = await postLi(account.access_token, mediaUrls);
+  console.log("[LinkedIn] Response:", JSON.stringify(data).substring(0, 500));
   if (data.status === 401 || data.error?.code === 401) {
     const refreshed = await refreshToken("linkedin", account);
-    if (refreshed) data = await postLi(refreshed);
+    if (refreshed) data = await postLi(refreshed, mediaUrls);
+    console.log("[LinkedIn] Response after refresh:", JSON.stringify(data).substring(0, 500));
   }
 
-  if (data.error) return { platform: "linkedin", success: false, error: data.error.message };
+  if (data.error) return { platform: "linkedin", success: false, error: data.error.message || JSON.stringify(data).substring(0, 200) };
   return { platform: "linkedin", success: true, postId: data.id };
 }
 
