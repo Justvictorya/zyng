@@ -285,10 +285,44 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
   return { platform: "twitter", success: true, postId: data.data.id };
 }
 
+async function uploadLinkedInMedia(mediaUrl: string, token: string, owner: string): Promise<string | null> {
+  try {
+    const registerRes = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-Restli-Protocol-Version": "2.0.0" },
+      body: JSON.stringify({
+        registerUploadRequest: {
+          recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+          owner,
+          serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
+        },
+      }),
+    });
+    const regData = await registerRes.json();
+    const uploadUrl = regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
+    const asset = regData.value?.asset;
+    if (!uploadUrl || !asset) {
+      console.warn("[LinkedIn] Register upload failed:", JSON.stringify(regData).substring(0, 300));
+      return null;
+    }
+    const imageRes = await fetch(mediaUrl);
+    if (!imageRes.ok) { console.warn("[LinkedIn] Failed to fetch media from:", mediaUrl); return null; }
+    const imageBuffer = await imageRes.arrayBuffer();
+    const uploadRes = await fetch(uploadUrl, { method: "PUT", body: Buffer.from(imageBuffer) });
+    if (!uploadRes.ok) { console.warn("[LinkedIn] Media upload failed:", uploadRes.status); return null; }
+    return asset;
+  } catch (e) {
+    console.warn("[LinkedIn] Upload media error:", e);
+    return null;
+  }
+}
+
 async function publishToLinkedIn(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
+  const owner = `urn:li:person:${account.platform_user_id}`;
+
   const postLi = async (token: string, assetUrns: string[]) => {
     const body: any = {
-      author: `urn:li:person:${account.platform_user_id}`,
+      author: owner,
       lifecycleState: "PUBLISHED",
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
@@ -307,12 +341,28 @@ async function publishToLinkedIn(account: any, caption: string, mediaUrls: strin
     return r.json();
   };
 
-  let data = await postLi(account.access_token, mediaUrls);
+  let token = account.access_token;
+  let assetUrns: string[] = [];
+
+  if (mediaUrls.length > 0) {
+    const results = await Promise.all(mediaUrls.map((url) => uploadLinkedInMedia(url, token, owner)));
+    assetUrns = results.filter(Boolean) as string[];
+    if (assetUrns.length > 0) console.log("[LinkedIn] Uploaded", assetUrns.length, "media assets");
+  }
+
+  let data = await postLi(token, assetUrns);
   console.log("[LinkedIn] Response:", JSON.stringify(data).substring(0, 500));
   if (data.status === 401 || data.error?.code === 401) {
     const refreshed = await refreshToken("linkedin", account);
-    if (refreshed) data = await postLi(refreshed, mediaUrls);
-    console.log("[LinkedIn] Response after refresh:", JSON.stringify(data).substring(0, 500));
+    if (refreshed) {
+      token = refreshed;
+      if (mediaUrls.length > 0) {
+        const results = await Promise.all(mediaUrls.map((url) => uploadLinkedInMedia(url, token, owner)));
+        assetUrns = results.filter(Boolean) as string[];
+      }
+      data = await postLi(token, assetUrns);
+      console.log("[LinkedIn] Response after refresh:", JSON.stringify(data).substring(0, 500));
+    }
   }
 
   if (data.error) return { platform: "linkedin", success: false, error: data.error.message || JSON.stringify(data).substring(0, 200) };
