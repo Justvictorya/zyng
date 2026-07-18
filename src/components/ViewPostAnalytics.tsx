@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ensureValidToken } from "../context/ZyngContext";
 import {
   ArrowLeft,
   BarChart2,
@@ -47,8 +49,23 @@ export default function ViewPostAnalytics() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { dialect, posts, isPostsLoading } = useZyng();
+  const [livePost, setLivePost] = useState<any>(null);
 
-  const post = posts.find((p) => p.id === id);
+  const contextPost = posts.find((p) => p.id === id);
+  const post = livePost || contextPost;
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const token = await ensureValidToken();
+      if (!token) return;
+      const res = await fetch(`/api/posts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) setLivePost(data.post);
+    })();
+  }, [id]);
 
   if (isPostsLoading) {
     return (

@@ -118,6 +118,22 @@ router.post("/", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/:id", async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
+
+  const { id } = req.params;
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) return res.status(404).json({ success: false, error: "Post not found" });
+  return res.json({ success: true, post: data });
+});
+
 router.put("/:id", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
