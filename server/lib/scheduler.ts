@@ -27,11 +27,12 @@ function parseField(raw: any): any {
 async function checkDuePosts() {
   try {
     const now = new Date().toISOString();
+    // Use a raw query to handle the OR condition properly
     const { data: posts, error } = await supabase
       .from("posts")
       .select("*")
       .lt("schedule_time", now)
-      .is("publish_results", null)
+      .filter("publish_results", "eq", null)
       .limit(50);
 
     if (error) {
@@ -82,7 +83,23 @@ async function checkDuePosts() {
 
         const platformCaptions: Record<string, string> | undefined = parseField(post.platform_captions) || undefined;
 
-        console.debug(`[Scheduler] Publishing post ${post.id}`);
+        // Atomically claim this post so no other scheduler tick processes it
+        const lockTime = new Date().toISOString();
+        const { data: locked } = await serviceDb
+          .from("posts")
+          .update({ processing_at: lockTime })
+          .eq("id", post.id)
+          .filter("processing_at", "lt", new Date(Date.now() - 120_000).toISOString())
+          .or("processing_at.is.null")
+          .select("id")
+          .single();
+
+        if (!locked) {
+          console.debug(`[Scheduler] Post ${post.id} skipped (already being processed)`);
+          continue;
+        }
+
+        console.log(`[Scheduler] Publishing post ${post.id} (${toPublish.length}/${allPlatforms.length} platforms)`);
 
         const results = await publishPost(
           post.id, post.user_id, post.caption || "",
@@ -95,30 +112,21 @@ async function checkDuePosts() {
         const updatedResults = [...dbExisting, ...results];
         publishedResults.set(post.id, updatedResults);
 
-        const allDone = updatedResults.length >= allPlatforms.length;
+        try {
+          await serviceDb
+            .from("posts")
+            .update({
+              publish_results: JSON.stringify(updatedResults),
+              processing_at: null,
+            })
+            .eq("id", post.id);
+        } catch (e: any) { console.error(`[Scheduler] Persist error for post ${post.id}:`, e?.message); }
 
-        if (allDone) {
-          try {
-            await serviceDb
-              .from("posts")
-              .update({ publish_results: JSON.stringify(updatedResults) })
-              .eq("id", post.id);
-          } catch (err: any) {
-            console.error(`[Scheduler] Failed to persist results for post ${post.id}:`, err.message);
-          }
-        } else {
-          // Partial — still persist so we don't re-publish on restart
-          try {
-            await serviceDb
-              .from("posts")
-              .update({ publish_results: JSON.stringify(updatedResults) })
-              .eq("id", post.id);
-          } catch (e: any) { console.error(`[Scheduler] Persist error for post ${post.id}:`, e?.message); }
-        }
-
-        console.debug(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
+        console.log(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
       } catch (err: any) {
         console.error(`[Scheduler] Post ${post.id} failed:`, err.message);
+        // Release lock on error so it can be retried
+        try { await serviceDb.from("posts").update({ processing_at: null }).eq("id", post.id); } catch {}
       }
     }
   } catch (err: any) {

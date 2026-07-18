@@ -285,14 +285,22 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
   return { platform: "twitter", success: true, postId: data.data.id };
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|avi|webm|mkv|m4v|flv)(\?|$)/i.test(url);
+}
+
 async function uploadLinkedInMedia(mediaUrl: string, token: string, owner: string): Promise<string | null> {
   try {
+    const isVideo = isVideoUrl(mediaUrl);
+    const recipe = isVideo
+      ? "urn:li:digitalmediaRecipe:feedshare-video"
+      : "urn:li:digitalmediaRecipe:feedshare-image";
     const registerRes = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "X-Restli-Protocol-Version": "2.0.0" },
       body: JSON.stringify({
         registerUploadRequest: {
-          recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+          recipes: [recipe],
           owner,
           serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
         },
@@ -302,7 +310,7 @@ async function uploadLinkedInMedia(mediaUrl: string, token: string, owner: strin
     const uploadUrl = regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
     const asset = regData.value?.asset;
     if (!uploadUrl || !asset) {
-      console.warn("[LinkedIn] Register upload failed:", JSON.stringify(regData).substring(0, 300));
+      console.warn(`[LinkedIn] Register upload failed (${isVideo ? "video" : "image"}):`, JSON.stringify(regData).substring(0, 300));
       return null;
     }
     const imageRes = await fetch(mediaUrl);
@@ -320,14 +328,14 @@ async function uploadLinkedInMedia(mediaUrl: string, token: string, owner: strin
 async function publishToLinkedIn(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
   const owner = `urn:li:person:${account.platform_user_id}`;
 
-  const postLi = async (token: string, assetUrns: string[]) => {
+  const postLi = async (token: string, assetUrns: string[], hasVideo: boolean) => {
     const body: any = {
       author: owner,
       lifecycleState: "PUBLISHED",
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
           shareCommentary: { text: caption },
-          shareMediaCategory: assetUrns.length > 0 ? "IMAGE" : "NONE",
+          shareMediaCategory: hasVideo ? "VIDEO" : assetUrns.length > 0 ? "IMAGE" : "NONE",
           media: assetUrns.map((urn) => ({ status: "READY", media: urn })),
         },
       },
@@ -350,7 +358,8 @@ async function publishToLinkedIn(account: any, caption: string, mediaUrls: strin
     if (assetUrns.length > 0) console.log("[LinkedIn] Uploaded", assetUrns.length, "media assets");
   }
 
-  let data = await postLi(token, assetUrns);
+  const hasVideo = mediaUrls.some(isVideoUrl);
+  let data = await postLi(token, assetUrns, hasVideo);
   console.log("[LinkedIn] Response:", JSON.stringify(data).substring(0, 500));
   if (data.status === 401 || data.error?.code === 401) {
     const refreshed = await refreshToken("linkedin", account);
@@ -360,7 +369,7 @@ async function publishToLinkedIn(account: any, caption: string, mediaUrls: strin
         const results = await Promise.all(mediaUrls.map((url) => uploadLinkedInMedia(url, token, owner)));
         assetUrns = results.filter(Boolean) as string[];
       }
-      data = await postLi(token, assetUrns);
+      data = await postLi(token, assetUrns, hasVideo);
       console.log("[LinkedIn] Response after refresh:", JSON.stringify(data).substring(0, 500));
     }
   }

@@ -82,6 +82,8 @@ router.post("/", async (req: Request, res: Response) => {
       caption,
       platforms: Array.isArray(platforms) ? platforms.join(",") : platforms,
       schedule_time: (schedule_time && schedule_time.length > 0) ? schedule_time : new Date().toISOString(),
+      publish_results: "[]",
+      processing_at: null,
     };
     if (platform_captions) insertData.platform_captions = JSON.stringify(platform_captions);
     if (platform_schedule) insertData.platform_schedule = JSON.stringify(platform_schedule);
@@ -98,7 +100,10 @@ router.post("/", async (req: Request, res: Response) => {
       ? Array.isArray(media_urls) ? media_urls : media_urls.split(",").filter(Boolean)
       : [];
 
-    if (urls.length > 0) await savePostMedia(data.id, urls);
+    if (urls.length > 0) {
+      await savePostMedia(data.id, urls);
+      await serviceDb.from("posts").update({ media_urls: JSON.stringify(urls) }).eq("id", data.id);
+    }
 
     const platformList = Array.isArray(platforms) ? platforms : platforms.split(",").map((p: string) => p.trim()).filter(Boolean);
 
@@ -251,11 +256,10 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
 
     recordPublishResults(post.id, results);
 
-    // Mark as processed in DB so scheduler won't re-pick it up
     try {
       await serviceDb
         .from("posts")
-        .update({ publish_results: JSON.stringify(results) })
+        .update({ publish_results: JSON.stringify(results), processing_at: null })
         .eq("id", post.id);
     } catch (e) {
       console.error(`[Posts] Failed to mark post ${post.id} as processed:`, e);
