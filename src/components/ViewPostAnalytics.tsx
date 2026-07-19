@@ -56,15 +56,19 @@ export default function ViewPostAnalytics() {
 
   useEffect(() => {
     if (!id) return;
-    (async () => {
+    let cancelled = false;
+    const fetchLive = async () => {
       const token = await ensureValidToken();
-      if (!token) return;
+      if (!token || cancelled) return;
       const res = await fetch(`/api/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setLivePost(data.post);
-    })();
+      if (data.success && !cancelled) setLivePost(data.post);
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [id]);
 
   if (isPostsLoading) {
