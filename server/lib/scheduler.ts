@@ -27,12 +27,12 @@ function parseField(raw: any): any {
 async function checkDuePosts() {
   try {
     const now = new Date().toISOString();
-    // Use a raw query to handle the OR condition properly
+    // Pick posts past their schedule time that are not currently being processed
     const { data: posts, error } = await supabase
       .from("posts")
       .select("*")
       .lt("schedule_time", now)
-      .filter("publish_results", "eq", null)
+      .is("processing_at", null)
       .limit(50);
 
     if (error) {
