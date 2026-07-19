@@ -12,9 +12,16 @@ interface PublishResult {
 // In-memory tracking for publish results (also persisted to DB when column exists)
 const publishedResults = new Map<string, PublishResult[]>();
 
-export function startScheduler() {
+export async function startScheduler() {
   if (intervalHandle) return;
   console.log("[Scheduler] Starting — checks every 60s for due posts");
+
+  // Release any stale processing locks from previous runs
+  const stale = new Date(Date.now() - 120_000).toISOString();
+  await serviceDb.from("posts").update({ processing_at: null }).lt("processing_at", stale).then((r) => {
+    if (r.error) console.error("[Scheduler] Failed to clear stale locks:", r.error.message);
+  });
+
   intervalHandle = setInterval(checkDuePosts, INTERVAL_MS);
   checkDuePosts();
 }
@@ -85,17 +92,17 @@ async function checkDuePosts() {
 
         // Atomically claim this post so no other scheduler tick processes it
         const lockTime = new Date().toISOString();
+        const staleThreshold = new Date(Date.now() - 120_000).toISOString();
         const { data: locked } = await serviceDb
           .from("posts")
           .update({ processing_at: lockTime })
           .eq("id", post.id)
-          .filter("processing_at", "lt", new Date(Date.now() - 120_000).toISOString())
-          .or("processing_at.is.null")
+          .or(`processing_at.lt.${staleThreshold},processing_at.is.null`)
           .select("id")
           .single();
 
         if (!locked) {
-          console.debug(`[Scheduler] Post ${post.id} skipped (already being processed)`);
+          console.debug(`[Scheduler] Post ${post.id} skipped (processing_at: ${post.processing_at})`);
           continue;
         }
 
