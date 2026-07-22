@@ -322,13 +322,26 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       }
 
       if (!existingUser) {
-        console.error(`[Auth] Could not find existing user for ${platform}: ${email}. Returning error.`);
-        return res.status(400).json({ success: false, error: createErr.message });
+        console.log(`[Auth] User was likely deleted from Supabase. Creating with new email.`);
+        const fallbackEmail = `social_${platform}_${Date.now()}@zyng.app`;
+        const { data: retryUser, error: retryErr } = await adminAuth.createUser({
+          email: fallbackEmail,
+          password,
+          user_metadata: { full_name: name },
+          email_confirm: true,
+        });
+        if (retryErr) {
+          console.error(`[Auth] Fallback createUser also failed:`, retryErr.message);
+          return res.status(400).json({ success: false, error: "Account creation failed. Please try again." });
+        }
+        userId = retryUser.user!.id;
+        email = fallbackEmail;
+        console.log(`[Auth] Created user with fallback email: ${fallbackEmail}`);
+      } else {
+        userId = existingUser.id;
+        await adminAuth.updateUserById(userId, { password });
+        console.log(`[Auth] Found and updated existing user for ${platform}: ${email} (${userId})`);
       }
-
-      userId = existingUser.id;
-      await adminAuth.updateUserById(userId, { password });
-      console.log(`[Auth] Found and updated existing user for ${platform}: ${email} (${userId})`);
     }
 
     const user = {
