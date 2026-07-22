@@ -250,10 +250,17 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
     const videoUrl = mediaUrls.find(isVideoUrl) || mediaUrls[0];
 
     const postVideo = async (token: string) => {
+      const headRes = await fetch(videoUrl, { method: "HEAD" });
+      const contentLength = parseInt(headRes.headers.get("content-length") || "0", 10);
+      console.log(`[TikTok] Video file size: ${contentLength} bytes`);
+
       const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ source_info: { source: "FILE_UPLOAD" }, post_info: postInfo }),
+        body: JSON.stringify({
+          post_info: postInfo,
+          source_info: { source: "FILE_UPLOAD", video_file_size: contentLength },
+        }),
       });
       const initData = await initRes.json();
       console.log("[TikTok] Video init response:", JSON.stringify(initData).substring(0, 500));
@@ -299,7 +306,10 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/photo/init/", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ source_info: { source: "FILE_UPLOAD", num_photos: 1 }, post_info: postInfo }),
+        body: JSON.stringify({
+          post_info: postInfo,
+          source_info: { source: "FILE_UPLOAD", num_photos: 1 },
+        }),
       });
       const initData = await initRes.json();
       console.log("[TikTok] Photo init response:", JSON.stringify(initData).substring(0, 500));
