@@ -222,30 +222,79 @@ async function publishToInstagram(account: any, caption: string, mediaUrls: stri
   return { platform: "instagram", success: true, postId: data.id };
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|avi|webm|mkv|m4v|flv)(\?|$)/i.test(url);
+}
+
+function isImageUrl(url: string): boolean {
+  return /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
+}
+
 async function publishToTikTok(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
   if (mediaUrls.length === 0) {
-    return { platform: "tiktok", success: false, error: "TikTok requires a video" };
+    return { platform: "tiktok", success: false, error: "TikTok requires media" };
   }
 
-  const videoUrl = mediaUrls.find((u) => u.match(/\.(mp4|mov|avi|webm)$/i)) || mediaUrls[0];
+  const hasVideo = mediaUrls.some(isVideoUrl);
+  const hasImage = mediaUrls.some(isImageUrl);
 
-  const postVideo = async (token: string) => {
-    const r = await fetch("https://open.tiktokapis.com/v2/video/upload/", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "pull", video_url: videoUrl, post_info: { title: caption, privacy_level: "PUBLIC" } }),
-    });
-    return r.json();
-  };
+  if (hasVideo) {
+    // Video upload
+    const videoUrl = mediaUrls.find(isVideoUrl) || mediaUrls[0];
 
-  let data = await postVideo(account.access_token);
-  if (data.error?.code === 401 || data.error?.code === "token_expired") {
-    const refreshed = await refreshToken("tiktok", account);
-    if (refreshed) data = await postVideo(refreshed);
+    const postVideo = async (token: string) => {
+      const r = await fetch("https://open.tiktokapis.com/v2/video/publish/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "pull", video_url: videoUrl, post_info: { title: caption, privacy_level: "PUBLIC_TO_EVERYONE" } }),
+      });
+      return r.json();
+    };
+
+    let data = await postVideo(account.access_token);
+    if (data.error?.code === 401 || data.error?.code === "token_expired") {
+      const refreshed = await refreshToken("tiktok", account);
+      if (refreshed) data = await postVideo(refreshed);
+    }
+
+    if (data.error) return { platform: "tiktok", success: false, error: data.error.message || JSON.stringify(data.error) };
+    return { platform: "tiktok", success: true, postId: data.data?.publish_id };
   }
 
-  if (data.error) return { platform: "tiktok", success: false, error: data.error.message || JSON.stringify(data.error) };
-  return { platform: "tiktok", success: true, postId: data.data?.publish_id };
+  if (hasImage) {
+    // Image upload - TikTok photo mode
+    const imageUrls = mediaUrls.filter(isImageUrl);
+
+    const postImage = async (token: string) => {
+      const r = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "PULL_FROM_URL",
+          video_url: imageUrls[0],
+          post_info: {
+            title: caption,
+            privacy_level: "PUBLIC_TO_EVERYONE",
+            disable_duet: false,
+            disable_comment: false,
+            disable_stitch: false,
+          },
+        }),
+      });
+      return r.json();
+    };
+
+    let data = await postImage(account.access_token);
+    if (data.error?.code === 401 || data.error?.code === "token_expired") {
+      const refreshed = await refreshToken("tiktok", account);
+      if (refreshed) data = await postImage(refreshed);
+    }
+
+    if (data.error) return { platform: "tiktok", success: false, error: data.error.message || JSON.stringify(data.error) };
+    return { platform: "tiktok", success: true, postId: data.data?.publish_id };
+  }
+
+  return { platform: "tiktok", success: false, error: "Unsupported media type for TikTok" };
 }
 
 async function publishToTwitter(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
@@ -283,10 +332,6 @@ async function publishToTwitter(account: any, caption: string, mediaUrls: string
   }
   console.log(`[Twitter] Publish success — tweet id: ${data.data.id}`);
   return { platform: "twitter", success: true, postId: data.data.id };
-}
-
-function isVideoUrl(url: string): boolean {
-  return /\.(mp4|mov|avi|webm|mkv|m4v|flv)(\?|$)/i.test(url);
 }
 
 async function uploadLinkedInMedia(mediaUrl: string, token: string, owner: string): Promise<string | null> {

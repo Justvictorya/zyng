@@ -57,6 +57,7 @@ export default function ViewSettings() {
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [linkedAccounts, setLinkedAccounts] = useState<Set<string>>(new Set());
   const [connectingNetwork, setConnectingNetwork] = useState<string | null>(null);
+  const [linkingError, setLinkingError] = useState<string | null>(null);
 
   const [profileName, setProfileName] = useState(user?.name || "");
   const [profileSaving, setProfileSaving] = useState(false);
@@ -325,6 +326,7 @@ export default function ViewSettings() {
     const token = localStorage.getItem("zyng_token");
     if (!token) return;
     setConnectingNetwork(networkId);
+    setLinkingError(null);
     try {
       const res = await fetch(`/api/oauth/${networkId}/connect`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -337,11 +339,13 @@ export default function ViewSettings() {
       } else {
         console.error("OAuth connect failed:", data);
         showToast(data.error || `Failed to connect to ${networkId}`, "error");
+        setLinkingError(networkId);
         setConnectingNetwork(null);
       }
     } catch (e) {
       console.error("Failed to start OAuth", e);
       showToast(`Connection error: ${(e as any)?.message || e}`, "error");
+      setLinkingError(networkId);
       setConnectingNetwork(null);
     }
   };
@@ -683,14 +687,18 @@ export default function ViewSettings() {
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => linked ? handleDisconnect(net) : handleConnect(net)}
-                    className={`px-3 py-1.5 text-[10px] font-mono border rounded ${
+                    disabled={connectingNetwork === net}
+                    className={`px-3 py-1.5 text-[10px] font-mono border rounded cursor-pointer transition-opacity ${
+                      connectingNetwork === net ? "opacity-50" : ""
+                    } ${
                       linked 
                         ? "bg-rose-500/10 text-rose-400 border-rose-500/20 font-semibold" 
                         : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 font-bold"
                     }`}
                     id={`linker-${net}`}
+                    onTouchEnd={(e) => { e.preventDefault(); linked ? handleDisconnect(net) : handleConnect(net); }}
                   >
-                    {linked ? "Disconnect" : "Connect"}
+                    {linkingError === net ? "Error" : connectingNetwork === net ? "..." : linked ? "Disconnect" : "Connect"}
                   </button>
                 </div>
               </div>

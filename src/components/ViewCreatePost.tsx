@@ -426,7 +426,7 @@ export default function ViewCreatePost() {
     }
 
     // Large files use chunked upload
-    const CHUNK_SIZE = 50 * 1024 * 1024;
+    const CHUNK_SIZE = 40 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const fileId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
