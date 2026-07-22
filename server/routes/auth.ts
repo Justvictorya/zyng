@@ -282,40 +282,53 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
 
     const password = crypto.randomUUID() + "Zyng!2";
 
-    const sbUrl = env("SUPABASE_URL");
-    const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
-    let existing: any = null;
-    try {
-      for (let page = 1; page <= 10; page++) {
-        const fetchRes = await fetch(`${sbUrl}/auth/v1/admin/users?page=${page}&per_page=200`, {
-          headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
-        });
-        const body = await fetchRes.json();
-        existing = body.users?.find((u: any) => u.email === email);
-        if (existing) break;
-        if (!body.users?.length) break;
-      }
-    } catch (e) {
-      console.error(`[Auth] Error searching for existing user:`, e);
-    }
-
     let userId: string;
 
-    if (existing) {
-      userId = existing.id;
-      await adminAuth.updateUserById(userId, { password });
-      console.log(`[Auth] Found existing user for ${platform} login: ${email}`);
+    const { data: newUser, error: createErr } = await adminAuth.createUser({
+      email,
+      password,
+      user_metadata: { full_name: name },
+      email_confirm: true,
+    });
+
+    if (!createErr) {
+      userId = newUser.user!.id;
     } else {
-      const { data, error } = await adminAuth.createUser({
-        email,
-        password,
-        user_metadata: { full_name: name },
-        email_confirm: true,
-      });
-      if (error) {
-        return res.status(400).json({ success: false, error: error.message });
+      console.log(`[Auth] createUser failed for ${platform} (${email}): ${createErr.message}. Searching existing...`);
+
+      let existingUser: any = null;
+      const sbUrl = env("SUPABASE_URL");
+      const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
+
+      try {
+        const searchRes = await fetch(`${sbUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`, {
+          headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+        });
+        const searchData = await searchRes.json();
+        console.log(`[Auth] Admin users search result:`, JSON.stringify(searchData).slice(0, 500));
+        existingUser = searchData.users?.find((u: any) => u.email === email);
+      } catch (e: any) {
+        console.error(`[Auth] Admin users search failed:`, e.message);
       }
-      userId = data.user!.id;
+
+      if (!existingUser) {
+        try {
+          const { data: sdkUsers, error: listErr } = await adminAuth.listUsers({ page: 1, perPage: 1000 });
+          console.log(`[Auth] SDK listUsers: ${sdkUsers?.users?.length || 0} users, error:`, listErr?.message);
+          existingUser = sdkUsers?.users?.find((u: any) => u.email === email);
+        } catch (e: any) {
+          console.error(`[Auth] SDK listUsers failed:`, e.message);
+        }
+      }
+
+      if (!existingUser) {
+        console.error(`[Auth] Could not find existing user for ${platform}: ${email}. Returning error.`);
+        return res.status(400).json({ success: false, error: createErr.message });
+      }
+
+      userId = existingUser.id;
+      await adminAuth.updateUserById(userId, { password });
+      console.log(`[Auth] Found and updated existing user for ${platform}: ${email} (${userId})`);
     }
 
     const user = {
