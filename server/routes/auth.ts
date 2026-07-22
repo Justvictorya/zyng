@@ -294,14 +294,21 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       const sbUrl = env("SUPABASE_URL");
       const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
       let existing: any = null;
-      for (let page = 1; page <= 10; page++) {
-        const fetchRes = await fetch(`${sbUrl}/auth/v1/admin/users?page=${page}&per_page=200`, {
+      try {
+        const searchRes = await fetch(`${sbUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&per_page=10`, {
           headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
         });
-        const body = await fetchRes.json();
-        existing = body.users?.find((u: any) => u.email === email);
-        if (existing) break;
-        if (!body.users?.length) break;
+        const searchData = await searchRes.json();
+        existing = searchData.users?.find((u: any) => u.email === email);
+      } catch (e) {
+        console.error(`[Auth] Failed to search for existing user by email:`, e);
+      }
+      if (!existing) {
+        const listRes = await fetch(`${sbUrl}/auth/v1/admin/users?page=1&per_page=200`, {
+          headers: { Authorization: `Bearer ${sbKey}`, apikey: sbKey },
+        });
+        const listData = await listRes.json();
+        existing = listData.users?.find((u: any) => u.email === email);
       }
       if (!existing) {
         return res.status(400).json({ success: false, error: error.message });
@@ -323,10 +330,13 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       avatar,
     };
 
-    const { data: sd } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: sd, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInErr) {
+      console.error(`[Auth] signInWithPassword failed after social login:`, signInErr.message);
+    }
     return res.json({
       success: true, user,
-      session: sd.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
+      session: sd?.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
