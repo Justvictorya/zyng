@@ -238,26 +238,48 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
   const hasVideo = mediaUrls.some(isVideoUrl);
   const hasImage = mediaUrls.some(isImageUrl);
 
+  const postInfo = {
+    title: caption,
+    privacy_level: "PUBLIC_TO_EVERYONE" as const,
+    disable_duet: false,
+    disable_comment: false,
+    disable_stitch: false,
+  };
+
   if (hasVideo) {
-    // Video upload
     const videoUrl = mediaUrls.find(isVideoUrl) || mediaUrls[0];
 
     const postVideo = async (token: string) => {
-      const r = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+      const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          source_info: { source: "PULL_FROM_URL", video_url: videoUrl },
-          post_info: {
-            title: caption,
-            privacy_level: "PUBLIC_TO_EVERYONE",
-            disable_duet: false,
-            disable_comment: false,
-            disable_stitch: false,
-          },
-        }),
+        body: JSON.stringify({ source_info: { source: "FILE_UPLOAD" }, post_info: postInfo }),
       });
-      return r.json();
+      const initData = await initRes.json();
+      console.log("[TikTok] Video init response:", JSON.stringify(initData).substring(0, 500));
+
+      if (initData.error) return initData;
+
+      const publishId = initData.data?.publish_id;
+      const uploadUrl = initData.data?.upload_url;
+      if (!uploadUrl) return { error: { message: "No upload_url returned from TikTok init" } };
+
+      const videoRes = await fetch(videoUrl);
+      if (!videoRes.ok) return { error: { message: `Failed to fetch video: ${videoRes.status}` } };
+      const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+      console.log(`[TikTok] Downloaded video: ${videoBuffer.length} bytes`);
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "video/mp4", "Content-Length": String(videoBuffer.length) },
+        body: videoBuffer,
+      });
+      const uploadText = await uploadRes.text();
+      console.log(`[TikTok] Upload response status: ${uploadRes.status}, body: ${uploadText.substring(0, 300)}`);
+
+      if (!uploadRes.ok) return { error: { message: `TikTok upload failed (${uploadRes.status}): ${uploadText.substring(0, 200)}` } };
+
+      return { data: { publish_id: publishId } };
     };
 
     let data = await postVideo(account.access_token);
@@ -271,25 +293,40 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
   }
 
   if (hasImage) {
-    // Image upload - TikTok photo mode
-    const imageUrls = mediaUrls.filter(isImageUrl);
+    const imageUrl = mediaUrls.find(isImageUrl) || mediaUrls[0];
 
     const postImage = async (token: string) => {
-      const r = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+      const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/photo/init/", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          source_info: { source: "PULL_FROM_URL", video_url: imageUrls[0] },
-          post_info: {
-            title: caption,
-            privacy_level: "PUBLIC_TO_EVERYONE",
-            disable_duet: false,
-            disable_comment: false,
-            disable_stitch: false,
-          },
-        }),
+        body: JSON.stringify({ source_info: { source: "FILE_UPLOAD", num_photos: 1 }, post_info: postInfo }),
       });
-      return r.json();
+      const initData = await initRes.json();
+      console.log("[TikTok] Photo init response:", JSON.stringify(initData).substring(0, 500));
+
+      if (initData.error) return initData;
+
+      const publishId = initData.data?.publish_id;
+      const uploadUrls = initData.data?.upload_urls;
+      if (!uploadUrls || uploadUrls.length === 0) return { error: { message: "No upload_url returned from TikTok photo init" } };
+
+      const imgRes = await fetch(imageUrl);
+      if (!imgRes.ok) return { error: { message: `Failed to fetch image: ${imgRes.status}` } };
+      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      console.log(`[TikTok] Downloaded image: ${imgBuffer.length} bytes`);
+
+      const contentType = /\.png/i.test(imageUrl) ? "image/png" : "image/jpeg";
+      const uploadRes = await fetch(uploadUrls[0], {
+        method: "PUT",
+        headers: { "Content-Type": contentType, "Content-Length": String(imgBuffer.length) },
+        body: imgBuffer,
+      });
+      const uploadText = await uploadRes.text();
+      console.log(`[TikTok] Image upload status: ${uploadRes.status}, body: ${uploadText.substring(0, 300)}`);
+
+      if (!uploadRes.ok) return { error: { message: `TikTok image upload failed (${uploadRes.status}): ${uploadText.substring(0, 200)}` } };
+
+      return { data: { publish_id: publishId } };
     };
 
     let data = await postImage(account.access_token);
