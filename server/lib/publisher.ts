@@ -238,9 +238,11 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
   const hasVideo = mediaUrls.some(isVideoUrl);
   const hasImage = mediaUrls.some(isImageUrl);
 
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
+
   const postInfo = {
     title: caption,
-    privacy_level: "PUBLIC_TO_EVERYONE" as const,
+    privacy_level: "SELF_ONLY" as const,
     disable_duet: false,
     disable_comment: false,
     disable_stitch: false,
@@ -251,21 +253,32 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
 
     const postVideo = async (token: string) => {
       const headRes = await fetch(videoUrl, { method: "HEAD" });
-      const contentLength = parseInt(headRes.headers.get("content-length") || "0", 10);
-      console.log(`[TikTok] Video file size: ${contentLength} bytes`);
+      const videoSize = parseInt(headRes.headers.get("content-length") || "0", 10);
+      const totalChunkCount = Math.floor(videoSize / CHUNK_SIZE);
+      console.log(`[TikTok] Video: ${videoSize} bytes, chunk_size: ${CHUNK_SIZE}, total_chunks: ${totalChunkCount}`);
 
-      const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
+      const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json; charset=UTF-8",
+        },
         body: JSON.stringify({
           post_info: postInfo,
-          source_info: { source: "FILE_UPLOAD", video_file_size: contentLength },
+          source_info: {
+            source: "FILE_UPLOAD",
+            video_size: videoSize,
+            chunk_size: CHUNK_SIZE,
+            total_chunk_count: totalChunkCount,
+          },
         }),
       });
       const initData = await initRes.json();
       console.log("[TikTok] Video init response:", JSON.stringify(initData).substring(0, 500));
 
-      if (initData.error) return initData;
+      if (initData.error?.code !== "ok" && initData.error?.code !== 0) {
+        return { error: { message: initData.error?.message || JSON.stringify(initData.error) } };
+      }
 
       const publishId = initData.data?.publish_id;
       const uploadUrl = initData.data?.upload_url;
@@ -276,20 +289,37 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
       console.log(`[TikTok] Downloaded video: ${videoBuffer.length} bytes`);
 
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": "video/mp4", "Content-Length": String(videoBuffer.length) },
-        body: videoBuffer,
-      });
-      const uploadText = await uploadRes.text();
-      console.log(`[TikTok] Upload response status: ${uploadRes.status}, body: ${uploadText.substring(0, 300)}`);
+      // Upload in chunks
+      for (let chunkIndex = 0; chunkIndex < totalChunkCount; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const isLastChunk = chunkIndex === totalChunkCount - 1;
+        const end = isLastChunk ? videoBuffer.length - 1 : start + CHUNK_SIZE - 1;
+        const chunk = videoBuffer.subarray(start, end + 1);
 
-      if (!uploadRes.ok) return { error: { message: `TikTok upload failed (${uploadRes.status}): ${uploadText.substring(0, 200)}` } };
+        const contentRange = `bytes ${start}-${end}/${videoBuffer.length}`;
+        console.log(`[TikTok] Uploading chunk ${chunkIndex + 1}/${totalChunkCount}: ${contentRange}`);
+
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "video/mp4",
+            "Content-Length": String(chunk.length),
+            "Content-Range": contentRange,
+          },
+          body: chunk,
+        });
+        const uploadText = await uploadRes.text();
+        console.log(`[TikTok] Chunk ${chunkIndex + 1} status: ${uploadRes.status}, body: ${uploadText.substring(0, 200)}`);
+
+        if (!uploadRes.ok && uploadRes.status !== 206) {
+          return { error: { message: `TikTok upload failed chunk ${chunkIndex + 1} (${uploadRes.status}): ${uploadText.substring(0, 200)}` } };
+        }
+      }
 
       return { data: { publish_id: publishId } };
     };
 
-    let data = await postVideo(account.access_token);
+    let data: any = await postVideo(account.access_token);
     if (data.error?.code === 401 || data.error?.code === "token_expired") {
       const refreshed = await refreshToken("tiktok", account);
       if (refreshed) data = await postVideo(refreshed);
@@ -305,7 +335,10 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
     const postImage = async (token: string) => {
       const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/photo/init/", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json; charset=UTF-8",
+        },
         body: JSON.stringify({
           post_info: postInfo,
           source_info: { source: "FILE_UPLOAD", num_photos: 1 },
@@ -314,7 +347,9 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const initData = await initRes.json();
       console.log("[TikTok] Photo init response:", JSON.stringify(initData).substring(0, 500));
 
-      if (initData.error) return initData;
+      if (initData.error?.code !== "ok" && initData.error?.code !== 0) {
+        return { error: { message: initData.error?.message || JSON.stringify(initData.error) } };
+      }
 
       const publishId = initData.data?.publish_id;
       const uploadUrls = initData.data?.upload_urls;
@@ -328,7 +363,10 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const contentType = /\.png/i.test(imageUrl) ? "image/png" : "image/jpeg";
       const uploadRes = await fetch(uploadUrls[0], {
         method: "PUT",
-        headers: { "Content-Type": contentType, "Content-Length": String(imgBuffer.length) },
+        headers: {
+          "Content-Type": contentType,
+          "Content-Length": String(imgBuffer.length),
+        },
         body: imgBuffer,
       });
       const uploadText = await uploadRes.text();
@@ -339,7 +377,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       return { data: { publish_id: publishId } };
     };
 
-    let data = await postImage(account.access_token);
+    let data: any = await postImage(account.access_token);
     if (data.error?.code === 401 || data.error?.code === "token_expired") {
       const refreshed = await refreshToken("tiktok", account);
       if (refreshed) data = await postImage(refreshed);
