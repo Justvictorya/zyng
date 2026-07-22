@@ -112,6 +112,10 @@ router.post("/", async (req: Request, res: Response) => {
       try {
         publishResults = await publishPost(data.id, userId, caption, platformList, urls, platform_captions);
         recordPublishResults(data.id, publishResults);
+        await serviceDb
+          .from("posts")
+          .update({ publish_results: JSON.stringify(publishResults) })
+          .eq("id", data.id);
       } catch (err: any) {
         console.error(`[Publisher] Post ${data.id} publish error:`, err);
       }
