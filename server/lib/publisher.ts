@@ -243,10 +243,19 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
     const videoUrl = mediaUrls.find(isVideoUrl) || mediaUrls[0];
 
     const postVideo = async (token: string) => {
-      const r = await fetch("https://open.tiktokapis.com/v2/video/publish/", {
+      const r = await fetch("https://open.tiktokapis.com/v2/post/publish/inbox/video/init/", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "pull", video_url: videoUrl, post_info: { title: caption, privacy_level: "PUBLIC_TO_EVERYONE" } }),
+        body: JSON.stringify({
+          source_info: { source: "PULL_FROM_URL", video_url: videoUrl },
+          post_info: {
+            title: caption,
+            privacy_level: "PUBLIC_TO_EVERYONE",
+            disable_duet: false,
+            disable_comment: false,
+            disable_stitch: false,
+          },
+        }),
       });
       return r.json();
     };
@@ -270,8 +279,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: "PULL_FROM_URL",
-          video_url: imageUrls[0],
+          source_info: { source: "PULL_FROM_URL", video_url: imageUrls[0] },
           post_info: {
             title: caption,
             privacy_level: "PUBLIC_TO_EVERYONE",
