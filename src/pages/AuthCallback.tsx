@@ -97,9 +97,11 @@ export default function AuthCallback() {
       if (data.success) {
         setCurrentUser(data.user);
         localStorage.setItem("zyng_user", JSON.stringify(data.user));
-        localStorage.setItem("zyng_token", session.access_token);
-        if (session.refresh_token) {
-          localStorage.setItem("zyng_refresh_token", session.refresh_token);
+        if (data.session?.access_token) {
+          localStorage.setItem("zyng_token", data.session.access_token);
+        }
+        if (data.session?.refresh_token) {
+          localStorage.setItem("zyng_refresh_token", data.session.refresh_token);
         }
         navigate("/dashboard", { replace: true });
       } else {
