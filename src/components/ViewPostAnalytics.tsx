@@ -58,13 +58,17 @@ export default function ViewPostAnalytics() {
     if (!id) return;
     let cancelled = false;
     const fetchLive = async () => {
-      const token = await ensureValidToken();
-      if (!token || cancelled) return;
-      const res = await fetch(`/api/posts/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success && !cancelled) setLivePost(data.post);
+      try {
+        const token = await ensureValidToken();
+        if (!token || cancelled) return;
+        const res = await fetch(`/api/posts/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success && !cancelled) setLivePost(data.post);
+      } catch (e) {
+        console.error("Failed to fetch live post data", e);
+      }
     };
     fetchLive();
     const interval = setInterval(fetchLive, 5000);

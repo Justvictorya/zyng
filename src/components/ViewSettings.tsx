@@ -82,9 +82,10 @@ export default function ViewSettings() {
         if (data.success) {
           setLinkedAccounts(new Set(data.accounts.map((a: any) => a.platform)));
         }
-      } catch (e) {
-        console.error("Failed to fetch connected accounts", e);
-      }
+    } catch (e) {
+      console.error("Failed to fetch connected accounts", e);
+      showToast("Could not load connected accounts.", "error");
+    }
     };
     fetchAccounts();
   }, []);
@@ -110,7 +111,7 @@ export default function ViewSettings() {
       setLinkedAccounts(prev => new Set(prev).add(connected));
       window.history.replaceState({}, "", "/settings");
     } else if (error) {
-      showToast(`Error: ${error}`, "error");
+      showToast(`Connection failed: ${error}`, "error");
       window.history.replaceState({}, "", "/settings");
     }
   }, []);
@@ -271,6 +272,7 @@ export default function ViewSettings() {
       if (data.success) setTeamMembers(data.members);
     } catch {
       console.error("Failed to fetch team");
+      showToast("Could not load team members.", "error");
     } finally {
       setTeamLoading(false);
     }
@@ -293,10 +295,10 @@ export default function ViewSettings() {
         setInviteEmail("");
         fetchTeamMembers();
       } else {
-        showToast(data.error || "Failed to invite", "error");
+        showToast(data.error || "Failed to send invitation. Please try again.", "error");
       }
     } catch {
-      showToast("Failed to invite", "error");
+      showToast("Failed to send invitation. Please try again.", "error");
     } finally {
       setInviting(false);
     }
@@ -315,10 +317,10 @@ export default function ViewSettings() {
         showToast("Member removed", "success");
         fetchTeamMembers();
       } else {
-        showToast(data.error || "Failed to remove", "error");
+        showToast(data.error || "Failed to remove team member. Please try again.", "error");
       }
     } catch {
-      showToast("Failed to remove", "error");
+      showToast("Failed to remove team member. Please try again.", "error");
     }
   };
 
@@ -368,10 +370,11 @@ export default function ViewSettings() {
         });
         showToast(`Disconnected from ${networkId}`, "success");
       } else {
-        showToast(`Disconnect failed: ${data.error}`, "error");
+        showToast(`Failed to disconnect: ${data.error || "Please try again."}`, "error");
       }
     } catch (e) {
       console.error("Failed to disconnect", e);
+      showToast("Failed to disconnect. Please try again.", "error");
     }
   };
 
@@ -698,7 +701,7 @@ export default function ViewSettings() {
                     id={`linker-${net}`}
                     onTouchEnd={(e) => { e.preventDefault(); linked ? handleDisconnect(net) : handleConnect(net); }}
                   >
-                    {linkingError === net ? "Error" : connectingNetwork === net ? "..." : linked ? "Disconnect" : "Connect"}
+                    {linkingError === net ? "Retry" : connectingNetwork === net ? "..." : linked ? "Disconnect" : "Connect"}
                   </button>
                 </div>
               </div>

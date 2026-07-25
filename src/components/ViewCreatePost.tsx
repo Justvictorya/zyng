@@ -223,6 +223,8 @@ export default function ViewCreatePost() {
       }
     } catch (e: any) {
       console.error(e);
+      setErrorMessage("AI caption generation failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsAiLoading(false);
     }
@@ -246,9 +248,14 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         setFixerOutput(data);
+      } else {
+        setErrorMessage(data.error || "Content fix failed. Please try again.");
+        setTimeout(() => setErrorMessage(""), 3000);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorMessage("Content fix failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsFixerLoading(false);
     }
@@ -272,9 +279,14 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         setVibeOutput(data.switchedText);
+      } else {
+        setErrorMessage(data.error || "Vibe switch failed. Please try again.");
+        setTimeout(() => setErrorMessage(""), 3000);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorMessage("Vibe switch failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsVibeLoading(false);
     }
@@ -298,9 +310,14 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         setScannerOutput(data);
+      } else {
+        setErrorMessage(data.error || "Algorithm scan failed. Please try again.");
+        setTimeout(() => setErrorMessage(""), 3000);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorMessage("Algorithm scan failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsScannerLoading(false);
     }
@@ -320,9 +337,14 @@ export default function ViewCreatePost() {
       const data = await res.json();
       if (data.success) {
         setViralOutput(data);
+      } else {
+        setErrorMessage(data.error || "Viral analysis failed. Please try again.");
+        setTimeout(() => setErrorMessage(""), 3000);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorMessage("Viral analysis failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsViralLoading(false);
     }

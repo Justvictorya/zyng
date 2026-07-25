@@ -116,6 +116,7 @@ export default function ViewAnalytics() {
         if (data.success) setStats(data.stats);
       } catch (e) {
         console.error("Failed to fetch analytics", e);
+        setStats(null);
       } finally {
         setLoading(false);
       }
@@ -151,6 +152,7 @@ export default function ViewAnalytics() {
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error("Export failed", e);
+      alert("Export failed. Please try again.");
     }
   };
 

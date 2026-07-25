@@ -71,6 +71,7 @@ export default function ViewPostsHistory() {
       }
     } catch (e) {
       console.error("Failed to update post inline:", e);
+      setPublishError("Failed to save changes. Please try again.");
     } finally {
       setIsUpdatingId(null);
     }
@@ -93,10 +94,10 @@ export default function ViewPostsHistory() {
         }
         triggerRefresh();
       } else {
-        setPublishError(data.error || "Publish failed");
+        setPublishError(data.error || "Failed to publish post. Please try again.");
       }
     } catch (e: any) {
-      setPublishError(e.message || "Failed to publish now");
+      setPublishError("Could not publish your post. Please check your connection and try again.");
     } finally {
       setPublishingId(null);
     }
@@ -116,6 +117,7 @@ export default function ViewPostsHistory() {
       }
     } catch (e) {
       console.error("Failed to delete post:", e);
+      setPublishError("Failed to delete post. Please try again.");
     }
   };
 

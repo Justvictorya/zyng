@@ -37,7 +37,7 @@ export default function AuthCallback() {
     }
 
     if (state && savedState && state !== savedState) {
-      setError("State mismatch. Possible CSRF attack.");
+      setError("Authentication failed due to a security mismatch. Please try logging in again.");
       return;
     }
 
@@ -65,10 +65,10 @@ export default function AuthCallback() {
         }
         navigate("/dashboard", { replace: true });
       } else {
-        setError(data.error || `${platform} login failed`);
+        setError(data.error || `Login with ${platform} failed. Please try again.`);
       }
     } catch {
-      setError("Failed to connect to authentication server.");
+      setError("Could not reach the server. Please check your internet connection.");
     }
   }
 
@@ -103,10 +103,10 @@ export default function AuthCallback() {
         }
         navigate("/dashboard", { replace: true });
       } else {
-        setError(data.error || "Failed to create session");
+        setError(data.error || "Could not complete your login. Please try again.");
       }
     } catch {
-      setError("Failed to connect to authentication server.");
+      setError("Could not reach the server. Please check your internet connection.");
     }
   }
 

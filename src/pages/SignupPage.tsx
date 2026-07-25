@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useZyng } from "../context/ZyngContext";
 import { supabase } from "../lib/supabase-client";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Zap, Calendar, Wand2 } from "lucide-react";
 
 export default function SignupPage() {
   const { setCurrentUser } = useZyng();
@@ -61,22 +61,68 @@ export default function SignupPage() {
           navigate("/dashboard");
         }, 1200);
       } else {
-        setError(data.error || "Signup registered error.");
+        setError(data.error || "Registration failed. Please check your details and try again.");
       }
     } catch {
-      setError("Error connecting to signup endpoint");
+      setError("Could not reach the server. Please check your internet connection and try again.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 md:px-8 py-6 sm:py-10 bg-[#050507] font-sans" id="signup-screen">
+    <div className="min-h-screen flex bg-[#050507] font-sans" id="signup-screen">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-indigo-600/10 to-[#050507]" />
+        <div className="absolute top-1/3 left-1/4 w-96 h-96 rounded-full bg-violet-500/10 blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/3 w-72 h-72 rounded-full bg-indigo-500/10 blur-[80px]" />
+        <div className="relative z-10 max-w-md px-12 space-y-8">
+          <div className="flex items-center gap-2.5">
+            <div className="h-10 w-10 bg-gradient-to-tr from-violet-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-950/40">
+              <Zap className="h-5 w-5 text-white animate-pulse" />
+            </div>
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">Zyng</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white leading-tight">
+            Start posting smarter with <span className="bg-gradient-to-tr from-violet-400 to-cyan-300 bg-clip-text text-transparent">AI-powered captions.</span>
+          </h1>
+          <div className="space-y-4">
+            {[
+              { icon: Wand2, text: "AI captions in English, Pidgin, Yoruba, Hausa, Igbo" },
+              { icon: Calendar, text: "Schedule posts across 7 platforms" },
+              { icon: Zap, text: "Free plan with 10 posts/month" },
+            ].map((item) => (
+              <div key={item.text} className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                  <item.icon className="h-4 w-4 text-violet-400" />
+                </div>
+                <span className="text-sm text-slate-300">{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center px-4 py-6 sm:py-10">
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none hidden sm:block"></div>
 
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 space-y-6 shadow-xl relative z-10">
-        <div className="text-center space-y-1.5">
-          <span className="text-[10px] text-indigo-400 font-bold font-mono tracking-widest uppercase">Start Free Social Scheduling</span>
+      <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-5 sm:p-8 space-y-5 shadow-xl relative z-10 backdrop-blur-xl">
+        {/* Mobile-only header */}
+        <div className="text-center space-y-1.5 lg:hidden">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="h-8 w-8 bg-gradient-to-tr from-violet-600 to-indigo-500 rounded-lg flex items-center justify-center">
+              <Zap className="h-4 w-4 text-white animate-pulse" />
+            </div>
+            <span className="text-lg font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">Zyng</span>
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-100">Join Zyng</h2>
+          <p className="text-xs text-slate-400">Create your free social media manager account.</p>
+        </div>
+        {/* Desktop header */}
+        <div className="hidden lg:block text-center space-y-1.5">
+          <span className="text-[10px] text-indigo-400 font-bold font-mono tracking-widest uppercase">Create Account</span>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">Join Zyng Socials</h2>
-          <p className="text-xs text-slate-400">Create a social manager profile to deploy 6 cross-posting.</p>
+          <p className="text-xs text-slate-400">Start scheduling across 7 platforms for free.</p>
         </div>
 
         {success && (
@@ -209,6 +255,7 @@ export default function SignupPage() {
           <span className="text-slate-700">·</span>
           <a href="/data-deletion" className="hover:text-slate-400 transition-colors">Data Deletion</a>
         </div>
+      </div>
       </div>
     </div>
   );
