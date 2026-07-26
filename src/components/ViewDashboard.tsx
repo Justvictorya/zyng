@@ -13,6 +13,7 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { Post } from "../types";
 import { translations } from "../lib/translations";
 import { useZyng } from "../context/ZyngContext";
@@ -24,6 +25,21 @@ export default function ViewDashboard() {
   
   const countScheduled = posts.filter(p => p.status === "scheduled").length;
   const countPublished = posts.filter(p => p.status === "published").length;
+
+  // Build real chart data from posts (last 14 days)
+  const chartData = React.useMemo(() => {
+    const days: { date: string; posts: number; published: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("en", { month: "short", day: "numeric" });
+      const dayPosts = posts.filter(p => p.created_at?.startsWith(dateStr)).length;
+      const dayPublished = posts.filter(p => p.created_at?.startsWith(dateStr) && p.status === "published").length;
+      days.push({ date: label, posts: dayPosts, published: dayPublished });
+    }
+    return days;
+  }, [posts]);
 
   const getDialectGreeting = () => {
     const name = user ? user.name : "";
@@ -149,10 +165,10 @@ export default function ViewDashboard() {
 
       </div>
 
-      {/* 3. Performance Snapshot Line Chart / SVG Panels */}
+      {/* 3. Performance Snapshot Line Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Dynamic Interactive Chart Graphic (Custom purely engineered SVG) */}
+        {/* Real Recharts Line Chart */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:col-span-2 shadow-md">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -160,64 +176,55 @@ export default function ViewDashboard() {
               <p className="text-[11px] text-slate-400 mt-0.5">Post activity over time</p>
             </div>
             <span className="text-xs text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 rounded px-2.5 py-1 font-mono">
-              Activity Map
+              Last 14 days
             </span>
           </div>
 
-          {/* SVG Custom Linear Grid Line Chart */}
-          <div className="relative h-60 w-full bg-slate-950/20 border border-slate-800/50 rounded-xl p-4 flex flex-col justify-between">
-            
-            {/* Legend guide lines */}
-            <div className="absolute inset-x-0 top-1/4 border-b border-slate-900/40 border-dashed pointer-events-none"></div>
-            <div className="absolute inset-x-0 top-2/4 border-b border-slate-900/40 border-dashed pointer-events-none"></div>
-            <div className="absolute inset-x-0 top-3/4 border-b border-slate-900/40 border-dashed pointer-events-none"></div>
-
-            {/* SVG line and gradient fill */}
-            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 500 200" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="glow-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              
-              {/* Interpolated Graph Shadow area */}
-              <path 
-                d="M 10,130 Q 90,80 180,110 T 350,50 T 490,30 L 490,200 L 10,200 Z" 
-                fill="url(#glow-grad)"
-              />
-
-              {/* The Line stroke of graph */}
-              <path 
-                d="M 10,130 Q 90,80 180,110 T 350,50 T 490,30" 
-                fill="none" 
-                stroke="url(#glow-line)" 
-                strokeWidth="3.5" 
-                strokeLinecap="round"
-              />
-
-              <linearGradient id="glow-line" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#a78bfa" />
-                <stop offset="50%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#06b6d4" />
-              </linearGradient>
-              
-              {/* Highlight interactive points */}
-              <circle cx="10" cy="130" r="4" fill="#a78bfa" stroke="#0f172a" strokeWidth="2" />
-              <circle cx="90" cy="80" r="4" fill="#818cf8" stroke="#0f172a" strokeWidth="2" />
-              <circle cx="180" cy="110" r="4" fill="#6366f1" stroke="#0f172a" strokeWidth="2" />
-              <circle cx="350" cy="50" r="4" fill="#4f46e5" stroke="#0f172a" strokeWidth="2" />
-              <circle cx="490" cy="30" r="5" fill="#06b6d4" stroke="#0f172a" strokeWidth="2" className="animate-ping" />
-            </svg>
-
-            {/* Axis titles */}
-            <div className="flex-1"></div>
-            <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-2">
-              <span>Week 1</span>
-              <span>Week 2</span>
-              <span>Week 3</span>
-              <span>Week 4</span>
-            </div>
+          <div className="h-60 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px' }}
+                  labelStyle={{ color: '#94a3b8' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="posts" 
+                  stroke="#6366f1" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorPosts)" 
+                  name="Total Posts"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="published" 
+                  stroke="#06b6d4" 
+                  strokeWidth={2}
+                  fillOpacity={0.1}
+                  fill="#06b6d4"
+                  name="Published"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

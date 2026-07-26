@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Download,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { translations } from "../lib/translations";
 import { useZyng } from "../context/ZyngContext";
 
@@ -102,6 +103,7 @@ export default function ViewAnalytics() {
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedBots, setExpandedBots] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "all">("30d");
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -109,7 +111,7 @@ export default function ViewAnalytics() {
       if (!savedUser) return;
       const uid = JSON.parse(savedUser).id;
       try {
-        const res = await fetch(`/api/v1/analytics/dashboard?user_id=${uid}`, {
+        const res = await fetch(`/api/v1/analytics/dashboard?user_id=${uid}&range=${dateRange}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("zyng_token")}` },
         });
         const data = await res.json();
@@ -122,7 +124,7 @@ export default function ViewAnalytics() {
       }
     };
     fetchStats();
-  }, []);
+  }, [dateRange]);
 
   const toggleBot = (platform: string) => {
     setExpandedBots(prev => {
@@ -167,7 +169,21 @@ export default function ViewAnalytics() {
   return (
     <div className="p-4 sm:p-8 space-y-8 animate-fade-in text-slate-200" id="zyng-view-analytics">
       <div className="flex items-center justify-between">
-        <div />
+        <div className="flex items-center gap-2">
+          {(["7d", "30d", "90d", "all"] as const).map((range) => (
+            <button
+              key={range}
+              onClick={() => setDateRange(range)}
+              className={`px-3 py-1.5 text-[10px] font-mono rounded-xl cursor-pointer transition-all ${
+                dateRange === range
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              }`}
+            >
+              {range === "all" ? "All Time" : range.replace("d", " Days")}
+            </button>
+          ))}
+        </div>
         <button
           onClick={handleExportCSV}
           className="px-3 py-1.5 text-[10px] font-mono bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white flex items-center gap-1.5 cursor-pointer"
@@ -388,32 +404,33 @@ export default function ViewAnalytics() {
           <TrendingUp className="h-4 w-4 text-slate-500" />
         </div>
         {stats?.postsOverTime && stats.postsOverTime.length > 0 ? (
-          <div className="flex items-end gap-1 h-32">
-            {stats.postsOverTime.slice(-14).map((day) => {
-              const maxCount = Math.max(...stats.postsOverTime.map((d) => d.count), 1);
-              const height = (day.count / maxCount) * 100;
-              return (
-                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[9px] font-mono text-slate-500">{day.count}</span>
-                  <div
-                    className="w-full bg-indigo-500 rounded-t hover:bg-indigo-400 transition-colors"
-                    style={{ height: `${height}%`, minHeight: day.count > 0 ? "4px" : "0" }}
-                  />
-                  <span className="text-[8px] font-mono text-slate-600 -rotate-45 origin-left whitespace-nowrap">
-                    {day.date.slice(5)}
-                  </span>
-                </div>
-              );
-            })}
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.postsOverTime.slice(-14)} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  tickFormatter={(v) => v.slice(5)}
+                />
+                <YAxis 
+                  tick={{ fontSize: 10, fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', fontSize: '12px' }}
+                  labelStyle={{ color: '#94a3b8' }}
+                />
+                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} name="Posts" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex items-end gap-1 h-32">
-            {Array.from({ length: 14 }).map((_, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-[9px] font-mono text-slate-500">0</span>
-                <div className="w-full bg-slate-800 rounded-t" style={{ height: "2px" }} />
-              </div>
-            ))}
+          <div className="h-48 flex items-center justify-center">
+            <p className="text-xs text-slate-500">No data yet. Posts will appear here once you start publishing.</p>
           </div>
         )}
       </div>

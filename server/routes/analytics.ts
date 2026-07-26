@@ -26,12 +26,25 @@ router.get("/dashboard", async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
+  const range = req.query.range as string || "30d";
+  let dateFilter: string | null = null;
+  if (range !== "all") {
+    const days = parseInt(range.replace("d", ""), 10);
+    if (!isNaN(days)) {
+      dateFilter = new Date(Date.now() - days * 86400000).toISOString();
+    }
+  }
+
   try {
-    const { data: posts } = await supabase
+    let query = supabase
       .from("posts")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
+    if (dateFilter) {
+      query = query.gte("created_at", dateFilter);
+    }
+    const { data: posts } = await query;
 
     const postCount = posts?.length || 0;
     const scheduledCount = posts?.filter((p: any) => new Date(p.schedule_time) > new Date()).length || 0;
