@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { validateEnv, ENV_SNAPSHOT } from "./config/env";
 import { requireAuth } from "./middleware/auth";
 import { errorHandler } from "./middleware/error";
@@ -123,6 +122,7 @@ app.use(errorHandler);
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting Zyng in development mode...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

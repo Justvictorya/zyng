@@ -9,8 +9,18 @@ interface PublishResult {
   platform: string;
   success: boolean;
 }
-// In-memory tracking for publish results (also persisted to DB when column exists)
+// In-memory cache for publish results (also persisted to DB). Evict old entries to limit memory.
 const publishedResults = new Map<string, PublishResult[]>();
+const MAX_CACHED_POSTS = 100;
+
+function cacheResults(postId: string, results: PublishResult[]) {
+  publishedResults.set(postId, results);
+  // Evict oldest entries when cache grows too large
+  if (publishedResults.size > MAX_CACHED_POSTS) {
+    const oldestKey = publishedResults.keys().next().value;
+    if (oldestKey) publishedResults.delete(oldestKey);
+  }
+}
 
 export async function startScheduler() {
   if (intervalHandle) return;
@@ -117,7 +127,7 @@ async function checkDuePosts() {
         const existing = parseField(post.publish_results);
         const dbExisting: PublishResult[] = Array.isArray(existing) ? existing : (publishedResults.get(post.id) || []);
         const updatedResults = [...dbExisting, ...results];
-        publishedResults.set(post.id, updatedResults);
+        cacheResults(post.id, updatedResults);
 
         try {
           await serviceDb
@@ -154,5 +164,5 @@ export function getPublishResults(postId: string): PublishResult[] | null {
 
 export function recordPublishResults(postId: string, results: PublishResult[]) {
   const existing = publishedResults.get(postId) || [];
-  publishedResults.set(postId, [...existing, ...results]);
+  cacheResults(postId, [...existing, ...results]);
 }

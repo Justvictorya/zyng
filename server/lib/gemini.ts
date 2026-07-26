@@ -1,9 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 import { env } from "../config/env";
 
-const apiKey = env("GEMINI_API_KEY");
+let _ai: GoogleGenAI | null = null;
 
-export const ai = new GoogleGenAI({
-  apiKey,
-  httpOptions: { headers: { "User-Agent": "aistudio-build" } },
-});
+export function getAI(): GoogleGenAI {
+  if (!_ai) {
+    _ai = new GoogleGenAI({
+      apiKey: env("GEMINI_API_KEY"),
+      httpOptions: { headers: { "User-Agent": "aistudio-build" } },
+    });
+  }
+  return _ai;
+}

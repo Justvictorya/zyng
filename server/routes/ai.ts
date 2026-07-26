@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { ai } from "../lib/gemini";
+import { getAI } from "../lib/gemini";
 import { optionalAuth } from "../middleware/auth";
 import { aiGenerateSchema, aiFixSchema, aiVibeSchema, aiViralSchema } from "../middleware/validate";
 import rateLimit from "express-rate-limit";
@@ -22,7 +22,7 @@ const MODEL = "gemini-2.5-flash";
 
 async function generateWithFallback(systemPrompt: string, userPrompt: string, fallback: any) {
   try {
-    const geminiRes = await ai.models.generateContent({
+    const geminiRes = await getAI().models.generateContent({
       model: MODEL,
       contents: userPrompt,
       config: {

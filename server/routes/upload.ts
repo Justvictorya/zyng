@@ -38,7 +38,7 @@ function getChunkDir(fileId: string) {
 }
 
 // Simple upload for files <= 50MB
-router.post("/", upload.array("files", 20), async (req: Request, res: Response) => {
+router.post("/", upload.array("files", 6), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
@@ -131,6 +131,8 @@ router.post("/complete", async (req: Request, res: Response) => {
 
     return res.json({ success: true, url });
   } catch (err: any) {
+    // Clean up orphaned chunks on error
+    try { const d = path.join("/tmp", "uploads", req.body?.fileId || ""); if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); } catch {}
     return res.status(500).json({ success: false, error: err.message });
   }
 });
