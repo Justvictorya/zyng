@@ -68,11 +68,9 @@ export default function PrivacyPage() {
           We never sell your personal data. We share data only with service providers essential to operating the Service:
         </p>
         <ul className="text-sm text-slate-300 space-y-1 list-disc pl-5">
-          <li><strong>Supabase:</strong> Database hosting and authentication (US-based, SOC 2 compliant).</li>
           <li><strong>Paystack:</strong> Payment processing for subscriptions (Nigeria-based, PCI-DSS compliant).</li>
           <li><strong>Google (Gemini AI):</strong> AI-powered caption generation (content sent for processing; not used for training).</li>
           <li><strong>Social media platforms:</strong> Meta (Facebook/Instagram/WhatsApp), TikTok, Twitter/X, LinkedIn, Google/YouTube — access tokens and content are shared with these platforms only when you authorize posting.</li>
-          <li><strong>Render:</strong> Cloud hosting for the application.</li>
         </ul>
 
         <h2 className="text-lg font-semibold text-white pt-4">6. Data Retention</h2>
@@ -94,7 +92,7 @@ export default function PrivacyPage() {
         <ul className="text-sm text-slate-300 space-y-1 list-disc pl-5">
           <li>All data transmitted between your browser and our servers is encrypted using TLS/SSL.</li>
           <li>OAuth tokens and API keys are encrypted at rest in our database.</li>
-          <li>Passwords are hashed using bcrypt via Supabase Auth.</li>
+          <li>Passwords are hashed using industry-standard bcrypt.</li>
           <li>We conduct regular security reviews and follow industry best practices.</li>
           <li>Despite these measures, no online service is 100% secure. We cannot guarantee absolute security.</li>
         </ul>
@@ -118,7 +116,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold text-white pt-4">10. International Data Transfers</h2>
         <p className="text-sm text-slate-300">
-          Your data is processed on servers in the United States (Render, Supabase). By using the Service, you consent to such transfers. We ensure appropriate safeguards are in place, including Standard Contractual Clauses where applicable.
+          Your data is processed on secure cloud servers in the United States. By using the Service, you consent to such transfers. We ensure appropriate safeguards are in place, including Standard Contractual Clauses where applicable.
         </p>
 
         <h2 className="text-lg font-semibold text-white pt-4">11. Children's Privacy</h2>
