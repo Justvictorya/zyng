@@ -476,6 +476,51 @@ export default function ViewSettings() {
         </div>
       </div>
 
+      {/* 1b. Danger Zone — Delete Account */}
+      <div className="bg-slate-900 border border-red-900/30 rounded-2xl p-6 shadow-md">
+        <div className="border-b border-red-900/20 pb-3 mb-6">
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-red-400" />
+            <h4 className="text-sm font-semibold text-red-300">Danger Zone</h4>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Permanently delete your account and all associated data</p>
+        </div>
+        <div className="space-y-3 max-w-md">
+          <p className="text-[11px] text-slate-500">
+            This action is irreversible. All your posts, connected accounts, analytics, and billing data will be permanently removed.
+          </p>
+          <button
+            onClick={async () => {
+              if (!confirm("Are you absolutely sure? This CANNOT be undone. All your data will be deleted permanently.")) return;
+              if (!confirm("Final confirmation: Delete my account and all data?")) return;
+              const token = await ensureValidToken();
+              if (!token) return;
+              try {
+                const res = await fetch("/api/profile/delete-account", {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const data = await res.json();
+                if (data.success) {
+                  localStorage.removeItem("zyng_token");
+                  localStorage.removeItem("zyng_refresh_token");
+                  localStorage.removeItem("zyng_user");
+                  window.location.href = "/login";
+                } else {
+                  showToast(data.error || "Failed to delete account", "error");
+                }
+              } catch {
+                showToast("Failed to delete account. Please try again.", "error");
+              }
+            }}
+            className="px-4 py-2 bg-red-600/20 border border-red-600/40 hover:bg-red-600/30 text-red-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete My Account
+          </button>
+        </div>
+      </div>
+
       {/* 2. Notifications */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
         <div className="border-b border-slate-850 pb-3 mb-6">

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { adminAuth } from "../lib/supabase";
+import { adminAuth, serviceDb } from "../lib/supabase";
 
 const router = Router();
 
@@ -121,6 +121,27 @@ router.put("/notification-prefs", async (req: Request, res: Response) => {
 
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete("/delete-account", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+  try {
+    // Delete user data from all tables
+    await serviceDb.from("posts").delete().eq("user_id", userId);
+    await serviceDb.from("connected_accounts").delete().eq("user_id", userId);
+    await serviceDb.from("oauth_states").delete().eq("user_id", userId);
+    await serviceDb.from("team_members").delete().eq("user_id", userId);
+
+    // Delete the auth user
+    const { error } = await adminAuth.deleteUser(userId);
+    if (error) return res.status(500).json({ success: false, error: error.message });
+
+    return res.json({ success: true, message: "Account deleted successfully" });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

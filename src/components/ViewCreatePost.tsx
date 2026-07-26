@@ -38,7 +38,7 @@ import { translations } from "../lib/translations";
 import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 export default function ViewCreatePost() {
-  const { dialect, currentUser: user, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
+  const { dialect, currentUser: user, posts, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
   const navigate = useNavigate();
   const t = translations[dialect];
 
@@ -61,7 +61,11 @@ export default function ViewCreatePost() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Zyng AI Copilot active tab
-  const [activeCopilotTab, setActiveCopilotTab] = useState<"caption" | "fixer" | "vibe" | "scanner" | "viral" | "hashtags">("caption");
+  const [activeCopilotTab, setActiveCopilotTab] = useState<"caption" | "fixer" | "vibe" | "scanner" | "viral" | "hashtags" | "besttime">("caption");
+
+  // Best Time to Post states
+  const [isBestTimeLoading, setIsBestTimeLoading] = useState(false);
+  const [bestTimeOutput, setBestTimeOutput] = useState<any>(null);
 
   // AI Operation individual states
   const [aiPrompt, setAiPrompt] = useState("");
@@ -384,6 +388,35 @@ export default function ViewCreatePost() {
       setTimeout(() => setErrorMessage(""), 3000);
     } finally {
       setIsHashtagLoading(false);
+    }
+  };
+
+  const handleBestTime = async () => {
+    setIsBestTimeLoading(true);
+    setBestTimeOutput(null);
+    try {
+      const postHistory = posts.map((p: any) => ({
+        time: p.schedule_time || p.created_at,
+        platforms: p.platforms,
+      }));
+      const res = await fetch("/api/ai/best-time", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
+        body: JSON.stringify({ platforms: selectedPlatforms, postHistory }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBestTimeOutput(data);
+      } else {
+        setErrorMessage(data.error || "Failed to get recommendations.");
+        setTimeout(() => setErrorMessage(""), 3000);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setErrorMessage("Failed to get best time recommendations.");
+      setTimeout(() => setErrorMessage(""), 3000);
+    } finally {
+      setIsBestTimeLoading(false);
     }
   };
 
@@ -936,6 +969,41 @@ export default function ViewCreatePost() {
                   className="w-full bg-slate-950 border border-slate-800/80 rounded-xl pl-11 pr-4.5 py-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-mono cursor-pointer"
                   id="schedule-datetime-picker"
                 />
+                {/* Quick time-pick buttons */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: "In 1 hour", offset: 1 },
+                    { label: "In 3 hours", offset: 3 },
+                    { label: "Tomorrow 9am", hour: 9, dayOffset: 1 },
+                    { label: "Tomorrow 12pm", hour: 12, dayOffset: 1 },
+                    { label: "Tomorrow 6pm", hour: 18, dayOffset: 1 },
+                    { label: "Next Mon 9am", hour: 9, nextDay: 1 },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      onClick={() => {
+                        const d = new Date();
+                        if (opt.offset) {
+                          d.setHours(d.getHours() + opt.offset, 0, 0, 0);
+                        } else if (opt.hour !== undefined) {
+                          if (opt.dayOffset) {
+                            d.setDate(d.getDate() + opt.dayOffset);
+                          }
+                          d.setHours(opt.hour, 0, 0, 0);
+                        } else if (opt.nextDay !== undefined) {
+                          const daysUntilMon = (8 - d.getDay()) % 7 || 7;
+                          d.setDate(d.getDate() + daysUntilMon);
+                          d.setHours(opt.hour!, 0, 0, 0);
+                        }
+                        const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+                        setScheduleTime(local.toISOString().slice(0, 16));
+                      }}
+                      className="px-2.5 py-1 bg-slate-900 border border-slate-800/60 rounded-lg text-[9px] font-mono text-slate-400 hover:text-amber-300 hover:border-amber-500/30 transition-all cursor-pointer"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1133,6 +1201,15 @@ export default function ViewCreatePost() {
               }`}
             >
               # Tags
+            </button>
+
+            <button 
+              onClick={() => setActiveCopilotTab("besttime")}
+              className={`py-3 px-1 transition-all border-b-2 ${
+                activeCopilotTab === "besttime" ? "border-indigo-500 text-indigo-300" : "border-transparent text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              Best Time
             </button>
           </div>
 
@@ -1557,9 +1634,66 @@ export default function ViewCreatePost() {
               </div>
             )}
 
-          </div>
+            {/* Best Time to Post */}
+            {activeCopilotTab === "besttime" && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono text-amber-400 font-bold block uppercase">Best Time to Post</span>
+                  <p className="text-xs text-slate-400">AI recommends optimal posting times based on your audience and history.</p>
+                </div>
 
-          {/* Quick instructions Footer */}
+                {user?.tier === "Free" ? (
+                  <div className="text-center py-8 space-y-3">
+                    <p className="text-xs text-slate-400">AI scheduling recommendations are available on Pro plan and above.</p>
+                    <button onClick={() => navigate("/dashboard/settings")} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg cursor-pointer">Upgrade to Pro</button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleBestTime}
+                      disabled={isBestTimeLoading}
+                      className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg font-mono text-[11px] cursor-pointer disabled:opacity-40"
+                    >
+                      {isBestTimeLoading ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : "Get Best Times"}
+                    </button>
+
+                    {bestTimeOutput?.recommendations && (
+                      <div className="space-y-3">
+                        {Object.entries(bestTimeOutput.recommendations).map(([platform, times]: [string, any]) => (
+                          <div key={platform} className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <span className="text-[9px] font-mono text-slate-500 uppercase block">{platform}</span>
+                            <div className="space-y-1.5">
+                              {times.map((t: any, idx: number) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setScheduleTime(t.time);
+                                    if (!selectedPlatforms.includes(platform)) {
+                                      setSelectedPlatforms(prev => [...prev, platform]);
+                                    }
+                                  }}
+                                  className="w-full flex items-center justify-between px-3 py-2 bg-slate-900 border border-slate-800/60 rounded-lg hover:border-amber-500/30 hover:bg-amber-500/5 transition-all cursor-pointer text-left"
+                                >
+                                  <span className="text-[11px] font-mono text-amber-300">
+                                    {new Date(t.time).toLocaleString("en", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Africa/Lagos" })}
+                                  </span>
+                                  <span className="text-[9px] text-slate-500">{t.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {bestTimeOutput.generalAdvice && (
+                          <p className="text-[10px] text-slate-500 italic">{bestTimeOutput.generalAdvice}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+          </div>
           <div className="p-4 bg-slate-950/60 border-t border-slate-850/65 flex items-center gap-2">
             <HelpCircle className="h-4.5 w-4.5 text-slate-500 shrink-0" />
             <span className="text-[11px] text-slate-400 font-sans">

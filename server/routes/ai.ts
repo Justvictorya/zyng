@@ -225,4 +225,58 @@ Rules:
   return res.json(result);
 });
 
+router.post("/best-time", async (req: Request, res: Response) => {
+  const { platforms, postHistory } = req.body;
+  const platformList = Array.isArray(platforms) ? platforms.join(", ") : "all platforms";
+
+  const historyContext = postHistory?.length
+    ? `User's recent post schedule times (WAT): ${JSON.stringify(postHistory.slice(0, 20))}`
+    : "No post history available yet — use general Nigerian audience best practices.";
+
+  const systemPrompt = `You are a social media scheduling optimizer for Nigerian/African audiences (WAT timezone).
+Analyze the posting history and recommend the 3 best times to post this week for each platform.
+
+All times must be in WAT (West Africa Time, UTC+1).
+
+Return ONLY valid JSON:
+{
+  "recommendations": {
+    "tiktok": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }],
+    "linkedin": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }],
+    "twitter": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }],
+    "youtube": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }],
+    "instagram": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }],
+    "facebook": [{ "time": "YYYY-MM-DDTHH:MM", "label": "Short reason" }]
+  },
+  "generalAdvice": "One sentence of general scheduling advice for Nigerian audiences"
+}`;
+
+  const fallback = {
+    recommendations: {
+      tiktok: [{ time: getNextWeekday(19), label: "Evening entertainment peak" }, { time: getNextWeekday(12), label: "Lunch break scroll time" }, { time: getNextWeekday(21), label: "Late night viral window" }],
+      linkedin: [{ time: getNextWeekday(8), label: "Professional morning check" }, { time: getNextWeekday(12), label: "Midday networking" }, { time: getNextWeekday(17), label: "End of work wrap-up" }],
+      twitter: [{ time: getNextWeekday(8), label: "Morning news cycle" }, { time: getNextWeekday(13), label: "Post-lunch engagement" }, { time: getNextWeekday(20), label: "Evening conversation peak" }],
+      youtube: [{ time: getNextWeekday(18), label: "After-work viewing" }, { time: getNextWeekday(14), label: "Afternoon tutorial time" }, { time: getNextWeekday(21), label: "Night owl content binge" }],
+      instagram: [{ time: getNextWeekday(11), label: "Late morning discovery" }, { time: getNextWeekday(19), label: "Evening story scroll" }, { time: getNextWeekday(21), label: "Nighttime explore page" }],
+      facebook: [{ time: getNextWeekday(9), label: "Morning feed check" }, { time: getNextWeekday(13), label: "Lunch break browsing" }, { time: getNextWeekday(20), label: "Prime evening engagement" }],
+    },
+    generalAdvice: "Nigerian audiences are most active between 8-10 AM, 12-2 PM, and 7-10 PM WAT. Weekdays see professional content peaks, while weekends drive entertainment engagement.",
+  };
+
+  const result = await generateWithFallback(
+    systemPrompt,
+    `Recommend best posting times for platforms: ${platformList}. ${historyContext}`,
+    fallback
+  );
+  return res.json(result);
+});
+
+function getNextWeekday(hour: number): string {
+  const now = new Date();
+  const d = new Date(now);
+  d.setHours(hour, 0, 0, 0);
+  if (d <= now) d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 16);
+}
+
 export default router;
