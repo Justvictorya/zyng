@@ -99,4 +99,31 @@ router.put("/password", async (req: Request, res: Response) => {
   }
 });
 
+router.put("/notification-prefs", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+  const { email_on_publish, email_on_failure } = req.body;
+  if (typeof email_on_publish !== "boolean" || typeof email_on_failure !== "boolean") {
+    return res.status(400).json({ success: false, error: "Invalid preferences" });
+  }
+
+  try {
+    const { data: current } = await adminAuth.getUserById(userId);
+    const existingMeta = current.user?.user_metadata || {};
+
+    const { error } = await adminAuth.updateUserById(userId, {
+      user_metadata: {
+        ...existingMeta,
+        notification_prefs: { email_on_publish, email_on_failure },
+      },
+    });
+
+    if (error) return res.status(500).json({ success: false, error: error.message });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;

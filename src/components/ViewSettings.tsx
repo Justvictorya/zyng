@@ -70,6 +70,9 @@ export default function ViewSettings() {
   const [inviting, setInviting] = useState(false);
   const [teamLoading, setTeamLoading] = useState(false);
 
+  const [notifPrefs, setNotifPrefs] = useState({ email_on_publish: true, email_on_failure: true });
+  const [notifSaving, setNotifSaving] = useState(false);
+
   useEffect(() => {
     const fetchAccounts = async () => {
       const token = localStorage.getItem("zyng_token");
@@ -120,6 +123,29 @@ export default function ViewSettings() {
     setToast(msg);
     setToastType(type);
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleSaveNotifPrefs = async () => {
+    const token = localStorage.getItem("zyng_token");
+    if (!token) return;
+    setNotifSaving(true);
+    try {
+      const res = await fetch("/api/profile/notification-prefs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(notifPrefs),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Notification preferences saved", "success");
+      } else {
+        showToast(data.error || "Failed to save preferences", "error");
+      }
+    } catch {
+      showToast("Failed to save preferences", "error");
+    } finally {
+      setNotifSaving(false);
+    }
   };
 
   const handleVerifyPayment = async (reference: string) => {
@@ -450,7 +476,48 @@ export default function ViewSettings() {
         </div>
       </div>
 
-      {/* 2. Plan Selection */}
+      {/* 2. Notifications */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
+        <div className="border-b border-slate-850 pb-3 mb-6">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-indigo-400" />
+            <h4 className="text-sm font-semibold text-slate-200">Email Notifications</h4>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Get notified when your posts publish or fail</p>
+        </div>
+        <div className="space-y-3 max-w-md">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifPrefs.email_on_publish}
+              onChange={(e) => setNotifPrefs({ ...notifPrefs, email_on_publish: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-indigo-500"
+            />
+            <span className="text-xs text-slate-300">Email me when a post publishes successfully</span>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifPrefs.email_on_failure}
+              onChange={(e) => setNotifPrefs({ ...notifPrefs, email_on_failure: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-indigo-500"
+            />
+            <span className="text-xs text-slate-300">Email me when a post fails to publish</span>
+          </label>
+          <div className="pt-2">
+            <button
+              onClick={handleSaveNotifPrefs}
+              disabled={notifSaving}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-xs font-semibold rounded-xl text-slate-200 flex items-center gap-1.5 cursor-pointer"
+            >
+              {notifSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Save Preferences
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Plan Selection */}
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">

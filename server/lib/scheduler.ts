@@ -1,5 +1,6 @@
 import { supabase, serviceDb } from "./supabase";
 import { publishPost } from "./publisher";
+import { notifyPostPublished, notifyPostFailed } from "./notifications";
 
 const INTERVAL_MS = 60_000;
 
@@ -140,6 +141,17 @@ async function checkDuePosts() {
         } catch (e: any) { console.error(`[Scheduler] Persist error for post ${post.id}:`, e?.message); }
 
         console.log(`[Scheduler] Post ${post.id} — ${updatedResults.length}/${allPlatforms.length} platforms done`);
+
+        // Send email notifications
+        const allDone = updatedResults.length >= allPlatforms.length;
+        if (allDone) {
+          const hasFailed = updatedResults.some((r) => !r.success);
+          if (hasFailed) {
+            notifyPostFailed(post.user_id, post.caption || "", allPlatforms, updatedResults).catch(() => {});
+          } else {
+            notifyPostPublished(post.user_id, post.caption || "", allPlatforms, updatedResults).catch(() => {});
+          }
+        }
       } catch (err: any) {
         console.error(`[Scheduler] Post ${post.id} failed:`, err.message);
         // Release lock on error so it can be retried

@@ -4,6 +4,7 @@ import { createPostSchema, updatePostSchema } from "../middleware/validate";
 import { savePostMedia, getPostMedia, getAllMedia, deletePostMedia } from "../lib/storage";
 import { publishPost } from "../lib/publisher";
 import { recordPublishResults } from "../lib/scheduler";
+import { notifyPostPublished, notifyPostFailed } from "../lib/notifications";
 
 const router = Router();
 
@@ -259,6 +260,14 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
     );
 
     recordPublishResults(post.id, results);
+
+    // Send email notifications
+    const hasFailed = results.some((r: any) => !r.success);
+    if (hasFailed) {
+      notifyPostFailed(post.user_id, post.caption || "", platforms, results).catch(() => {});
+    } else {
+      notifyPostPublished(post.user_id, post.caption || "", platforms, results).catch(() => {});
+    }
 
     try {
       await serviceDb
