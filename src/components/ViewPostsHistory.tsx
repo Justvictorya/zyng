@@ -21,15 +21,15 @@ import {
 } from "lucide-react";
 import { Post } from "../types";
 import { translations } from "../lib/translations";
-import { useZyng } from "../context/ZyngContext";
+import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 export default function ViewPostsHistory() {
   const { dialect, posts, isPostsLoading: isLoading, handlePostDeleted: onPostDeleted, handlePostUpdated: onPostUpdated, loadPosts: triggerRefresh } = useZyng();
   const t = translations[dialect];
   const navigate = useNavigate();
 
-  function authHeaders(): Record<string, string> {
-    const token = localStorage.getItem("zyng_token");
+  async function authHeaders(): Promise<Record<string, string>> {
+    const token = await ensureValidToken();
     return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
   }
 
@@ -59,7 +59,7 @@ export default function ViewPostsHistory() {
     try {
       const res = await fetch(`/api/posts/${id}`, {
         method: "PUT",
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify({ caption: editCaption })
       });
       const data = await res.json();
@@ -85,7 +85,7 @@ export default function ViewPostsHistory() {
     setPublishingId(post.id);
     setPublishError(null);
     try {
-      const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST", headers: authHeaders() });
+      const res = await fetch(`/api/posts/${post.id}/publish`, { method: "POST", headers: await authHeaders() });
       const data = await res.json();
       if (data.success) {
         const failed = data.results?.filter((r: any) => !r.success);
@@ -108,7 +108,7 @@ export default function ViewPostsHistory() {
     try {
       const res = await fetch(`/api/posts/${id}`, {
         method: "DELETE",
-        headers: authHeaders()
+        headers: await authHeaders()
       });
       const data = await res.json();
       if (data.success) {

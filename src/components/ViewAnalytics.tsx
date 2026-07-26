@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { translations } from "../lib/translations";
-import { useZyng } from "../context/ZyngContext";
+import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 interface BotPostEntry {
   id: string;
@@ -112,7 +112,7 @@ export default function ViewAnalytics() {
       const uid = JSON.parse(savedUser).id;
       try {
         const res = await fetch(`/api/v1/analytics/dashboard?user_id=${uid}&range=${dateRange}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("zyng_token")}` },
+          headers: { Authorization: `Bearer ${await ensureValidToken()}` },
         });
         const data = await res.json();
         if (data.success) setStats(data.stats);
@@ -138,7 +138,7 @@ export default function ViewAnalytics() {
   const totalPlatformPosts = stats?.platformDistribution?.reduce((s, p) => s + p.count, 0) || 1;
 
   const handleExportCSV = async () => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     try {
       const res = await fetch("/api/analytics/export", {

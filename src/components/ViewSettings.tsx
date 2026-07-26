@@ -18,7 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { translations } from "../lib/translations";
-import { useZyng } from "../context/ZyngContext";
+import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 function loadPaystackScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -75,7 +75,7 @@ export default function ViewSettings() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      const token = localStorage.getItem("zyng_token");
+      const token = await ensureValidToken();
       if (!token) return;
       try {
         const res = await fetch("/api/oauth/accounts", {
@@ -126,7 +126,7 @@ export default function ViewSettings() {
   };
 
   const handleSaveNotifPrefs = async () => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     setNotifSaving(true);
     try {
@@ -149,7 +149,7 @@ export default function ViewSettings() {
   };
 
   const handleVerifyPayment = async (reference: string) => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     try {
       const res = await fetch("/api/payments/verify", {
@@ -172,7 +172,7 @@ export default function ViewSettings() {
   };
 
   const handleUpgrade = useCallback(async (plan: "Pro" | "Enterprise") => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token || !user?.email) {
       showToast("Please log in first", "error");
       return;
@@ -235,7 +235,7 @@ export default function ViewSettings() {
   }, [user]);
 
   const handleSaveProfile = async () => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     setProfileSaving(true);
     try {
@@ -259,7 +259,7 @@ export default function ViewSettings() {
   };
 
   const handleChangePassword = async () => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     if (password.newPass.length < 8) {
       showToast("Password must be at least 8 characters", "error");
@@ -287,7 +287,7 @@ export default function ViewSettings() {
   };
 
   const fetchTeamMembers = async () => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     setTeamLoading(true);
     try {
@@ -306,7 +306,7 @@ export default function ViewSettings() {
 
   const handleInvite = async () => {
     if (!inviteEmail) return;
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     setInviting(true);
     try {
@@ -331,7 +331,7 @@ export default function ViewSettings() {
   };
 
   const handleRemoveMember = async (id: string) => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     try {
       const res = await fetch(`/api/team/members/${id}`, {
@@ -351,7 +351,7 @@ export default function ViewSettings() {
   };
 
   const handleConnect = async (networkId: string) => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     setConnectingNetwork(networkId);
     setLinkingError(null);
@@ -379,7 +379,7 @@ export default function ViewSettings() {
   };
 
   const handleDisconnect = async (networkId: string) => {
-    const token = localStorage.getItem("zyng_token");
+    const token = await ensureValidToken();
     if (!token) return;
     try {
       const res = await fetch(`/api/oauth/accounts/${networkId}`, {

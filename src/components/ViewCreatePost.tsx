@@ -42,8 +42,8 @@ export default function ViewCreatePost() {
   const navigate = useNavigate();
   const t = translations[dialect];
 
-  const authHeaders = (): Record<string, string> => {
-    const t = localStorage.getItem("zyng_token");
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const t = await ensureValidToken();
     return t ? { Authorization: `Bearer ${t}` } : {};
   };
 
@@ -100,16 +100,18 @@ export default function ViewCreatePost() {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem("zyng_token");
-    if (!token) return;
-    fetch("/api/oauth/accounts", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
+    const loadAccounts = async () => {
+      const token = await ensureValidToken();
+      if (!token) return;
+      try {
+        const res = await fetch("/api/oauth/accounts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
         if (data.success) setConnectedPlatforms(data.accounts.map((a: any) => a.platform));
-      })
-      .catch(() => {});
+      } catch {}
+    };
+    loadAccounts();
   }, []);
 
   // Media upload states
@@ -212,7 +214,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/generate-caption", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({
           prompt: aiPrompt,
           platforms: selectedPlatforms,
@@ -246,7 +248,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/fix-content", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ text: caption })
       });
       const data = await res.json();
@@ -277,7 +279,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/vibe-switcher", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ text: caption, targetVibe })
       });
       const data = await res.json();
@@ -308,7 +310,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/flag-scanner", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ text: caption })
       });
       const data = await res.json();
@@ -335,7 +337,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/viral-blueprint", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ url: viralUrl })
       });
       const data = await res.json();
@@ -366,7 +368,7 @@ export default function ViewCreatePost() {
     try {
       const res = await fetch("/api/ai/generate-hashtags", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ caption, platforms: selectedPlatforms })
       });
       const data = await res.json();
