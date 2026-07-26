@@ -16,6 +16,7 @@ import ViewPostsHistory from "./components/ViewPostsHistory";
 import ViewAnalytics from "./components/ViewAnalytics";
 import ViewPostAnalytics from "./components/ViewPostAnalytics";
 import ViewSettings from "./components/ViewSettings";
+import ViewCalendar from "./components/ViewCalendar";
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="posts" element={<ViewPostsHistory />} />
           <Route path="post/:id" element={<ViewPostAnalytics />} />
           <Route path="analytics" element={<ViewAnalytics />} />
+          <Route path="calendar" element={<ViewCalendar />} />
           <Route path="settings" element={<ViewSettings />} />
         </Route>
 

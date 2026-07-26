@@ -192,4 +192,37 @@ Return ONLY valid JSON:
   return res.json(result);
 });
 
+router.post("/generate-hashtags", async (req: Request, res: Response) => {
+  const { caption, platforms } = req.body;
+  if (!caption || typeof caption !== "string") {
+    return res.status(400).json({ success: false, error: "Caption is required" });
+  }
+
+  const platformList = Array.isArray(platforms) ? platforms.join(", ") : "general social media";
+
+  const systemPrompt = `You are a social media hashtag strategist for Nigerian and African audiences.
+Return ONLY a JSON object with this exact shape:
+{ "hashtags": ["tag1", "tag2", ...] }
+
+Rules:
+- Generate 8-12 relevant hashtags
+- Mix popular/trending hashtags with niche ones
+- Include platform-specific hashtags when relevant
+- Include Nigerian/African audience hashtags when the content relates to them
+- Keep hashtags short and memorable
+- No spaces in hashtags, use camelCase for multi-word tags
+- Return ONLY the JSON, no other text`;
+
+  const fallback = {
+    hashtags: ["socialmedia", "contentcreator", "digitalmarketing", "branding", "onlinebusiness", "growthhacking", "marketingtips", "contentstrategy"],
+  };
+
+  const result = await generateWithFallback(
+    systemPrompt,
+    `Generate hashtags for this ${platformList} post: "${caption.substring(0, 500)}"`,
+    fallback
+  );
+  return res.json(result);
+});
+
 export default router;

@@ -38,7 +38,7 @@ import { translations } from "../lib/translations";
 import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 export default function ViewCreatePost() {
-  const { dialect, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
+  const { dialect, currentUser: user, setNepaDraftActive, triggerDraftRecoverSignal, setTriggerDraftRecoverSignal, loadPosts } = useZyng();
   const navigate = useNavigate();
   const t = translations[dialect];
 
@@ -61,7 +61,7 @@ export default function ViewCreatePost() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Zyng AI Copilot active tab
-  const [activeCopilotTab, setActiveCopilotTab] = useState<"caption" | "fixer" | "vibe" | "scanner" | "viral">("caption");
+  const [activeCopilotTab, setActiveCopilotTab] = useState<"caption" | "fixer" | "vibe" | "scanner" | "viral" | "hashtags">("caption");
 
   // AI Operation individual states
   const [aiPrompt, setAiPrompt] = useState("");
@@ -85,6 +85,10 @@ export default function ViewCreatePost() {
   const [viralUrl, setViralUrl] = useState("");
   const [isViralLoading, setIsViralLoading] = useState(false);
   const [viralOutput, setViralOutput] = useState<AIViralResponse | null>(null);
+
+  // Hashtag Generator States
+  const [isHashtagLoading, setIsHashtagLoading] = useState(false);
+  const [hashtagOutput, setHashtagOutput] = useState<string[]>([]);
 
   // Draft management states
   const [drafts, setDrafts] = useState<{id: string; caption: string; platforms: string[]; scheduleTime: string; savedAt: string}[]>(() => {
@@ -348,6 +352,42 @@ export default function ViewCreatePost() {
     } finally {
       setIsViralLoading(false);
     }
+  };
+
+  // Hashtag Generator
+  const handleGenerateHashtags = async () => {
+    if (!caption) {
+      setErrorMessage("Write a caption first to generate hashtags!");
+      setTimeout(() => setErrorMessage(""), 3000);
+      return;
+    }
+    setIsHashtagLoading(true);
+    setHashtagOutput([]);
+    try {
+      const res = await fetch("/api/ai/generate-hashtags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ caption, platforms: selectedPlatforms })
+      });
+      const data = await res.json();
+      if (data.success && data.hashtags) {
+        setHashtagOutput(data.hashtags);
+      } else {
+        setErrorMessage(data.error || "Hashtag generation failed. Please try again.");
+        setTimeout(() => setErrorMessage(""), 3000);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setErrorMessage("Hashtag generation failed. Please try again.");
+      setTimeout(() => setErrorMessage(""), 3000);
+    } finally {
+      setIsHashtagLoading(false);
+    }
+  };
+
+  const addHashtagToCaption = (tag: string) => {
+    const hashTag = tag.startsWith("#") ? tag : `#${tag}`;
+    setCaption(prev => prev.trim() + (prev.trim().endsWith("\n") ? "" : "\n") + hashTag + " ");
   };
 
   // Draft management functions
@@ -1036,8 +1076,8 @@ export default function ViewCreatePost() {
             </div>
           </div>
 
-          {/* Sub tab buttons for the 5 utilities */}
-          <div className="grid grid-cols-3 sm:grid-cols-5 border-b border-slate-850/50 bg-slate-950/40 text-[10px] uppercase font-bold tracking-tight font-mono text-center">
+          {/* Sub tab buttons for the 6 utilities */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 border-b border-slate-850/50 bg-slate-950/40 text-[10px] uppercase font-bold tracking-tight font-mono text-center">
             
             <button 
               onClick={() => setActiveCopilotTab("caption")}
@@ -1082,6 +1122,15 @@ export default function ViewCreatePost() {
               }`}
             >
               Viral URL
+            </button>
+
+            <button 
+              onClick={() => setActiveCopilotTab("hashtags")}
+              className={`py-3 px-1 transition-all border-b-2 ${
+                activeCopilotTab === "hashtags" ? "border-indigo-500 text-indigo-300" : "border-transparent text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              # Tags
             </button>
           </div>
 
@@ -1447,6 +1496,61 @@ export default function ViewCreatePost() {
                       </div>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {activeCopilotTab === "hashtags" && (
+              <div className="space-y-4 animate-fade-in">
+                {user?.tier === "Free" ? (
+                  <div className="text-center py-8 space-y-3">
+                    <span className="text-[10px] font-mono text-amber-400 font-bold block uppercase">Pro Feature</span>
+                    <p className="text-xs text-slate-400">AI Hashtag Generator is available on Pro plan and above.</p>
+                    <button
+                      onClick={() => navigate("/dashboard/settings")}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg cursor-pointer"
+                    >
+                      Upgrade to Pro
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold block uppercase">AI Hashtag Generator</span>
+                      <p className="text-xs text-slate-400">Generate trending, relevant hashtags for your post. Click any hashtag to add it to your caption.</p>
+                    </div>
+
+                    <button
+                      onClick={handleGenerateHashtags}
+                      disabled={isHashtagLoading || !caption}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg font-mono text-[11px] cursor-pointer disabled:opacity-40"
+                      id="trigger-hashtag-gen"
+                    >
+                      {isHashtagLoading ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : "Generate Hashtags"}
+                    </button>
+
+                    {!caption && (
+                      <p className="text-[10px] text-slate-600 text-center">Write a caption first to generate hashtags.</p>
+                    )}
+
+                    {hashtagOutput.length > 0 && (
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 animate-fade-in shadow-lg">
+                        <span className="text-[9px] font-mono text-slate-500 uppercase block">Suggested Hashtags</span>
+                        <div className="flex flex-wrap gap-2">
+                          {hashtagOutput.map((tag, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => addHashtagToCaption(tag)}
+                              className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] font-mono rounded-lg hover:bg-indigo-500/20 hover:border-indigo-500/30 transition-all cursor-pointer"
+                            >
+                              #{tag.startsWith("#") ? tag.slice(1) : tag}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-slate-600">Click a hashtag to add it to your caption</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
