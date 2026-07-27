@@ -83,12 +83,6 @@ const PLANS = [
   },
 ];
 
-const TESTIMONIALS = [
-  { name: "Chidinma O.", role: "Content Creator", text: "Zyng saved me 3 hours every week. I schedule everything in Pidgin and it just works across all my platforms." },
-  { name: "Tunde A.", role: "Small Business Owner", text: "The AI caption engine understands Nigerian slang. I just type my idea and Zyng makes it go viral-ready." },
-  { name: "Amara E.", role: "Social Media Manager", text: "Managing 5 client accounts used to be chaos. Now it is one dashboard. The NEPA-proof drafts are genius." },
-];
-
 export default function LandingPage() {
   const navigate = useNavigate();
 
@@ -183,28 +177,6 @@ export default function LandingPage() {
               </div>
               <h3 className="text-sm font-bold text-white mb-1.5">{f.title}</h3>
               <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* TESTIMONIALS */}
-      <section className="relative z-10 w-full max-w-5xl mx-auto px-6 py-20">
-        <div className="text-center mb-14">
-          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Testimonials</span>
-          <h2 className="text-2xl sm:text-3xl font-bold mt-2 bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">Loved by Nigerian creators</h2>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-6">
-          {TESTIMONIALS.map(t => (
-            <div key={t.name} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
-              <div className="flex gap-0.5">
-                {[...Array(5)].map((_, i) => <Star key={i} className="h-3 w-3 text-amber-400 fill-amber-400" />)}
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">"{t.text}"</p>
-              <div>
-                <p className="text-xs font-semibold text-white">{t.name}</p>
-                <p className="text-[10px] text-slate-500">{t.role}</p>
-              </div>
             </div>
           ))}
         </div>
