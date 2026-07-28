@@ -15,6 +15,7 @@ import {
   X,
   CalendarDays,
   TrendingUp,
+  Upload,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { DialectType } from "../types";
@@ -51,6 +52,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     { id: "posts", label: t.postsHistory, icon: History },
     { id: "calendar", label: "Calendar", icon: CalendarDays },
     { id: "insights", label: "Insights", icon: TrendingUp },
+    { id: "bulk", label: "Bulk Schedule", icon: Upload },
     { id: "analytics", label: t.analytics, icon: BarChart2 },
     { id: "settings", label: t.settings, icon: Settings },
   ];

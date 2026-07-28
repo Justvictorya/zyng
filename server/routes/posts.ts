@@ -284,4 +284,52 @@ router.post("/:id/publish", async (req: Request, res: Response) => {
   }
 });
 
+// Bulk schedule posts from CSV
+router.post("/bulk", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+  const { posts: csvPosts } = req.body;
+  if (!Array.isArray(csvPosts) || csvPosts.length === 0) {
+    return res.status(400).json({ success: false, error: "No posts provided" });
+  }
+
+  if (csvPosts.length > 50) {
+    return res.status(400).json({ success: false, error: "Maximum 50 posts per batch" });
+  }
+
+  const created = [];
+  const errors = [];
+
+  for (let i = 0; i < csvPosts.length; i++) {
+    const { caption, platforms, schedule_time } = csvPosts[i];
+    if (!caption || !platforms) {
+      errors.push({ index: i, error: "Missing caption or platforms" });
+      continue;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .insert({
+          user_id: userId,
+          caption,
+          platforms,
+          schedule_time: schedule_time || new Date().toISOString(),
+          media_urls: [],
+          status: schedule_time ? "scheduled" : "draft",
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      created.push({ id: data.id, index: i });
+    } catch (err: any) {
+      errors.push({ index: i, error: err.message });
+    }
+  }
+
+  return res.json({ success: true, created: created.length, errors });
+});
+
 export default router;
