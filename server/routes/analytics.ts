@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, serviceDb } from "../lib/supabase";
 import { getPublishResults } from "../lib/scheduler";
 
 const router = Router();
@@ -14,7 +14,7 @@ function isPublished(post: any): boolean {
   return false;
 }
 
-function parseResults(raw: any): { platform: string; success: boolean; error?: string }[] {
+function parseResults(raw: any): { platform: string; success: boolean; error?: string; postId?: string }[] {
   try {
     const pr = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (Array.isArray(pr)) return pr;
@@ -353,6 +353,28 @@ router.get("/posting-insights", async (req: Request, res: Response) => {
         if (c > maxDayCount) { maxDayCount = c; maxDay = parseInt(d); }
       }
       stat.bestDay = maxDayCount > 0 ? maxDay : null;
+
+      // Aggregate live engagement from engagement_data
+      let liveLikes = 0, liveComments = 0, liveShares = 0, liveViews = 0;
+      for (const post of posts) {
+        const platforms = typeof post.platforms === "string"
+          ? post.platforms.split(",").map((p: string) => p.trim().toLowerCase()).filter(Boolean)
+          : [];
+        if (!platforms.includes(pf)) continue;
+        const engData = post.engagement_data
+          ? (typeof post.engagement_data === "string" ? JSON.parse(post.engagement_data) : post.engagement_data)
+          : {};
+        const platformEng = engData[pf];
+        if (platformEng) {
+          liveLikes += platformEng.likes || 0;
+          liveComments += platformEng.comments || 0;
+          liveShares += platformEng.shares || 0;
+          liveViews += platformEng.views || 0;
+        }
+      }
+      if (liveLikes + liveComments + liveShares + liveViews > 0) {
+        (stat as any).liveEngagement = { likes: liveLikes, comments: liveComments, shares: liveShares, views: liveViews };
+      }
     }
 
     // Overall best day/hour
@@ -379,5 +401,213 @@ router.get("/posting-insights", async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// Engagement data fetcher — pulls live stats from connected platforms
+router.post("/fetch-engagement", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+  try {
+    // Get connected accounts
+    const { data: accounts } = await supabase
+      .from("connected_accounts")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (!accounts || accounts.length === 0) {
+      return res.json({ success: true, fetched: 0, message: "No connected accounts" });
+    }
+
+    // Get published posts that have publish_results with platform post IDs
+    const { data: posts } = await supabase
+      .from("posts")
+      .select("id, publish_results, engagement_data")
+      .eq("user_id", userId)
+      .not("publish_results", "is", null);
+
+    if (!posts || posts.length === 0) {
+      return res.json({ success: true, fetched: 0, message: "No published posts" });
+    }
+
+    let fetched = 0;
+    const updates: { postId: string; engagementData: any }[] = [];
+
+    for (const post of posts) {
+      const results = parseResults(post.publish_results);
+      if (!results.length) continue;
+
+      const existingEng = post.engagement_data
+        ? (typeof post.engagement_data === "string" ? JSON.parse(post.engagement_data) : post.engagement_data)
+        : {};
+
+      let changed = false;
+
+      for (const result of results) {
+        if (!result.success || !result.postId) continue;
+        const platform = result.platform;
+
+        // Skip if already fetched recently (within 30 min)
+        const existing = existingEng[platform];
+        if (existing && existing.fetched_at) {
+          const elapsed = Date.now() - new Date(existing.fetched_at).getTime();
+          if (elapsed < 30 * 60 * 1000) continue;
+        }
+
+        const account = accounts.find((a: any) => a.platform === platform);
+        if (!account || !account.access_token) continue;
+
+        try {
+          const engData = await fetchPlatformEngagement(platform, result.postId, account.access_token);
+          if (engData) {
+            existingEng[platform] = { ...engData, fetched_at: new Date().toISOString() };
+            changed = true;
+            fetched++;
+          }
+        } catch (err: any) {
+          console.log(`[Engagement] Failed for ${platform}:${result.postId}: ${err.message}`);
+        }
+      }
+
+      if (changed) {
+        updates.push({ postId: post.id, engagementData: existingEng });
+      }
+    }
+
+    // Batch update
+    for (const u of updates) {
+      await supabase
+        .from("posts")
+        .update({ engagement_data: u.engagementData })
+        .eq("id", u.postId);
+    }
+
+    return res.json({ success: true, fetched, updated: updates.length });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+async function fetchPlatformEngagement(
+  platform: string,
+  platformPostId: string,
+  accessToken: string
+): Promise<{ likes: number; comments: number; shares: number; views: number } | null> {
+  switch (platform) {
+    case "youtube":
+      return fetchYouTubeEngagement(platformPostId, accessToken);
+    case "tiktok":
+      return fetchTikTokEngagement(platformPostId, accessToken);
+    case "twitter":
+      return fetchTwitterEngagement(platformPostId, accessToken);
+    case "linkedin":
+      return fetchLinkedInEngagement(platformPostId, accessToken);
+    case "facebook":
+      return fetchFacebookEngagement(platformPostId, accessToken);
+    case "instagram":
+      return fetchInstagramEngagement(platformPostId, accessToken);
+    default:
+      return null;
+  }
+}
+
+async function fetchYouTubeEngagement(videoId: string, accessToken: string) {
+  const url = `https://youtube.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`YouTube ${res.status}`);
+  const data = await res.json() as any;
+  const stats = data.items?.[0]?.statistics;
+  if (!stats) return null;
+  return {
+    likes: parseInt(stats.likeCount || "0"),
+    comments: parseInt(stats.commentCount || "0"),
+    shares: 0,
+    views: parseInt(stats.viewCount || "0"),
+  };
+}
+
+async function fetchTikTokEngagement(videoId: string, accessToken: string) {
+  const url = `https://open.tiktokapis.com/v2/video/info/?video_id=${videoId}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`TikTok ${res.status}`);
+  const data = await res.json() as any;
+  const info = data.data;
+  if (!info) return null;
+  return {
+    likes: info.statistics?.like_count || 0,
+    comments: info.statistics?.comment_count || 0,
+    shares: info.statistics?.share_count || 0,
+    views: info.statistics?.view_count || 0,
+  };
+}
+
+async function fetchTwitterEngagement(tweetId: string, accessToken: string) {
+  const url = `https://api.x.com/2/tweets/${tweetId}?tweet.fields=public_metrics`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`Twitter ${res.status}`);
+  const data = await res.json() as any;
+  const metrics = data.data?.public_metrics;
+  if (!metrics) return null;
+  return {
+    likes: metrics.like_count || 0,
+    comments: metrics.reply_count || 0,
+    shares: metrics.retweet_count || 0,
+    views: metrics.impression_count || 0,
+  };
+}
+
+async function fetchLinkedInEngagement(shareId: string, accessToken: string) {
+  // LinkedIn share stats require organization URN — use basic share info
+  const url = `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=share&shares=urn:li:share:${shareId}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}`, "X-Restli-Protocol-Version": "2.0.0" },
+  });
+  if (!res.ok) throw new Error(`LinkedIn ${res.status}`);
+  const data = await res.json() as any;
+  const stats = data.elements?.[0]?.totalShareStatistics;
+  if (!stats) return null;
+  return {
+    likes: stats.likeCount || 0,
+    comments: stats.commentCount || 0,
+    shares: stats.shareCount || 0,
+    views: stats.clickCount || 0,
+  };
+}
+
+async function fetchFacebookEngagement(postId: string, accessToken: string) {
+  const fields = "likes.summary(true),comments.summary(true),shares";
+  const url = `https://graph.facebook.com/v22.0/${postId}?fields=${fields}&access_token=${accessToken}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Facebook ${res.status}`);
+  const data = await res.json() as any;
+  return {
+    likes: data.likes?.summary?.total_count || 0,
+    comments: data.comments?.summary?.total_count || 0,
+    shares: data.shares?.count || 0,
+    views: 0,
+  };
+}
+
+async function fetchInstagramEngagement(mediaId: string, accessToken: string) {
+  const fields = "like_count,comments_count,children{like_count,comments_count}";
+  const url = `https://graph.facebook.com/v22.0/${mediaId}?fields=${fields}&access_token=${accessToken}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Instagram ${res.status}`);
+  const data = await res.json() as any;
+  let totalLikes = data.like_count || 0;
+  let totalComments = data.comments_count || 0;
+  // Include child media engagement (carousel posts)
+  if (data.children?.data) {
+    for (const child of data.children.data) {
+      totalLikes += child.like_count || 0;
+      totalComments += child.comments_count || 0;
+    }
+  }
+  return {
+    likes: totalLikes,
+    comments: totalComments,
+    shares: 0,
+    views: 0,
+  };
+}
 
 export default router;

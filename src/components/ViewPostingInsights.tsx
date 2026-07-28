@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Clock, BarChart3, Calendar, TrendingUp, Loader2, Zap } from "lucide-react";
+import { Clock, BarChart3, Calendar, TrendingUp, Loader2, Zap, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useZyng, ensureValidToken } from "../context/ZyngContext";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -34,6 +35,7 @@ interface PlatformInsight {
   bestDay: number | null;
   avgEngagement: number;
   topPost: { id: string; caption: string; engagement: number; date: string } | null;
+  liveEngagement?: { likes: number; comments: number; shares: number; views: number };
 }
 
 interface Insights {
@@ -77,15 +79,43 @@ function HourBar({ hour, count, max }: React.PropsWithoutRef<{ hour: number; cou
 }
 
 export default function ViewPostingInsights() {
-  const { dialect } = useZyng();
+  const { dialect, currentUser: user } = useZyng();
+  const navigate = useNavigate();
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
+
+  if (user?.tier === "Free") {
+    return (
+      <div className="p-4 sm:p-8 space-y-6 animate-fade-in text-slate-200">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-5 w-5 text-indigo-400" />
+          <h2 className="text-lg font-bold text-white">Posting Insights</h2>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center space-y-4">
+          <Lock className="h-8 w-8 text-amber-400 mx-auto" />
+          <p className="text-sm text-slate-400">Posting Insights is a Pro feature.</p>
+          <button
+            onClick={() => navigate("/dashboard/settings")}
+            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl cursor-pointer"
+          >
+            Upgrade to Pro
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     const fetchInsights = async () => {
       const token = await ensureValidToken();
       if (!token) return;
       try {
+        // Trigger background engagement fetch from platforms (non-blocking)
+        fetch("/api/analytics/fetch-engagement", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+
         const res = await fetch("/api/analytics/posting-insights", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -251,6 +281,33 @@ export default function ViewPostingInsights() {
                     <p className="text-[9px] text-slate-500 mt-0.5">
                       {stat.topPost.engagement} engagement · {new Date(stat.topPost.date).toLocaleDateString("en", { month: "short", day: "numeric" })}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Live Engagement Data */}
+              {stat.liveEngagement && (
+                <div className="bg-slate-950 rounded-xl p-3">
+                  <span className="text-[8px] font-mono text-slate-600 uppercase block mb-2">Live Engagement</span>
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">{stat.liveEngagement.likes.toLocaleString()}</p>
+                      <p className="text-[8px] font-mono text-slate-500">Likes</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">{stat.liveEngagement.comments.toLocaleString()}</p>
+                      <p className="text-[8px] font-mono text-slate-500">Comments</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">{stat.liveEngagement.shares.toLocaleString()}</p>
+                      <p className="text-[8px] font-mono text-slate-500">Shares</p>
+                    </div>
+                    {stat.liveEngagement.views > 0 && (
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-white">{stat.liveEngagement.views.toLocaleString()}</p>
+                        <p className="text-[8px] font-mono text-slate-500">Views</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
