@@ -215,11 +215,31 @@ router.get("/posting-insights", async (req: Request, res: Response) => {
   if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
 
   try {
-    const { data: posts } = await supabase
-      .from("posts")
-      .select("id, caption, platforms, schedule_time, created_at, publish_results, engagement_data, status")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    let posts;
+    try {
+      const result = await supabase
+        .from("posts")
+        .select("id, caption, platforms, schedule_time, created_at, publish_results, engagement_data, status")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      posts = result.data;
+      if (result.error && result.error.message?.includes("engagement_data")) {
+        // Column doesn't exist yet — fall back without it
+        const fallback = await supabase
+          .from("posts")
+          .select("id, caption, platforms, schedule_time, created_at, publish_results, status")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        posts = fallback.data;
+      }
+    } catch {
+      const fallback = await supabase
+        .from("posts")
+        .select("id, caption, platforms, schedule_time, created_at, publish_results, status")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      posts = fallback.data;
+    }
 
     if (!posts || posts.length === 0) {
       return res.json({

@@ -116,6 +116,25 @@ import { serviceDb } from "./lib/supabase";
   } catch {}
 })();
 
+// Auto-migrate: add engagement_data column if missing
+(async () => {
+  try {
+    const { error } = await serviceDb.from("posts").select("engagement_data").limit(1);
+    if (error && error.message?.includes("engagement_data")) {
+      console.log("[Migration] Adding engagement_data column to posts...");
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({ query: "ALTER TABLE posts ADD COLUMN IF NOT EXISTS engagement_data JSONB DEFAULT '{}'::jsonb" }),
+      });
+      if (res.ok) console.log("[Migration] engagement_data column added.");
+      else console.warn("[Migration] Could not add column automatically — run SQL manually.");
+    }
+  } catch {}
+})();
+
 // Error handler — after all routes
 app.use(errorHandler);
 
