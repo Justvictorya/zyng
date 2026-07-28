@@ -14,6 +14,7 @@ import {
   Moon,
   X,
   CalendarDays,
+  TrendingUp,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { DialectType } from "../types";
@@ -49,6 +50,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     { id: "create-post", label: t.createPost, icon: PenSquare, badge: "AI" },
     { id: "posts", label: t.postsHistory, icon: History },
     { id: "calendar", label: "Calendar", icon: CalendarDays },
+    { id: "insights", label: "Insights", icon: TrendingUp },
     { id: "analytics", label: t.analytics, icon: BarChart2 },
     { id: "settings", label: t.settings, icon: Settings },
   ];

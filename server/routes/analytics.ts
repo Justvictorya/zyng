@@ -210,4 +210,154 @@ router.get("/export", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/posting-insights", async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+  try {
+    const { data: posts } = await supabase
+      .from("posts")
+      .select("id, caption, platforms, schedule_time, created_at, publish_results, engagement_data, status")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (!posts || posts.length === 0) {
+      return res.json({
+        success: true,
+        insights: {
+          platforms: {},
+          bestDayHour: { day: null, hour: null },
+          totalPosts: 0,
+        },
+      });
+    }
+
+    // Per-platform analysis
+    const platformStats: Record<string, {
+      lastPostAt: string | null;
+      totalPosts: number;
+      publishedCount: number;
+      postsByHour: Record<number, number>;
+      postsByDay: Record<number, number>;
+      totalEngagement: number;
+      bestHour: number | null;
+      bestDay: number | null;
+      avgEngagement: number;
+      topPost: { id: string; caption: string; engagement: number; date: string } | null;
+    }> = {};
+
+    const allDays: Record<number, number> = {};
+    const allHours: Record<number, number> = {};
+
+    for (const post of posts) {
+      const platforms = typeof post.platforms === "string"
+        ? post.platforms.split(",").map((p: string) => p.trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      const isPublished = post.status === "published" ||
+        (post.publish_results && (() => {
+          try {
+            const pr = typeof post.publish_results === "string" ? JSON.parse(post.publish_results) : post.publish_results;
+            return Array.isArray(pr) && pr.some((r: any) => r.success);
+          } catch { return false; }
+        })());
+
+      const postDate = new Date(post.schedule_time || post.created_at);
+      const hour = postDate.getHours();
+      const day = postDate.getDay();
+
+      allDays[day] = (allDays[day] || 0) + 1;
+      allHours[hour] = (allHours[hour] || 0) + 1;
+
+      let totalEng = 0;
+      const engData = post.engagement_data
+        ? (typeof post.engagement_data === "string" ? JSON.parse(post.engagement_data) : post.engagement_data)
+        : {};
+
+      for (const eng of Object.values(engData) as any[]) {
+        totalEng += (eng.likes || 0) + (eng.comments || 0) + (eng.shares || 0);
+      }
+
+      for (const pf of platforms) {
+        if (!platformStats[pf]) {
+          platformStats[pf] = {
+            lastPostAt: null,
+            totalPosts: 0,
+            publishedCount: 0,
+            postsByHour: {},
+            postsByDay: {},
+            totalEngagement: 0,
+            bestHour: null,
+            bestDay: null,
+            avgEngagement: 0,
+            topPost: null,
+          };
+        }
+
+        const stat = platformStats[pf];
+        stat.totalPosts++;
+        if (isPublished) stat.publishedCount++;
+
+        if (!stat.lastPostAt || post.created_at > stat.lastPostAt) {
+          stat.lastPostAt = post.created_at;
+        }
+
+        stat.postsByHour[hour] = (stat.postsByHour[hour] || 0) + 1;
+        stat.postsByDay[day] = (stat.postsByDay[day] || 0) + 1;
+        stat.totalEngagement += totalEng;
+
+        const engScore = totalEng;
+        if (!stat.topPost || engScore > stat.topPost.engagement) {
+          stat.topPost = {
+            id: post.id,
+            caption: (post.caption || "").substring(0, 80),
+            engagement: engScore,
+            date: post.created_at,
+          };
+        }
+      }
+    }
+
+    // Calculate best hour/day per platform
+    for (const [pf, stat] of Object.entries(platformStats)) {
+      stat.avgEngagement = stat.totalPosts > 0 ? Math.round(stat.totalEngagement / stat.totalPosts) : 0;
+
+      let maxHour = 0, maxHourCount = 0;
+      for (const [h, c] of Object.entries(stat.postsByHour)) {
+        if (c > maxHourCount) { maxHourCount = c; maxHour = parseInt(h); }
+      }
+      stat.bestHour = maxHourCount > 0 ? maxHour : null;
+
+      let maxDay = 0, maxDayCount = 0;
+      for (const [d, c] of Object.entries(stat.postsByDay)) {
+        if (c > maxDayCount) { maxDayCount = c; maxDay = parseInt(d); }
+      }
+      stat.bestDay = maxDayCount > 0 ? maxDay : null;
+    }
+
+    // Overall best day/hour
+    let bestOverallDay: number | null = null;
+    let bestOverallHour: number | null = null;
+    let maxDayTotal = 0;
+    let maxHourTotal = 0;
+    for (const [d, c] of Object.entries(allDays)) {
+      if (c > maxDayTotal) { maxDayTotal = c; bestOverallDay = parseInt(d); }
+    }
+    for (const [h, c] of Object.entries(allHours)) {
+      if (c > maxHourTotal) { maxHourTotal = c; bestOverallHour = parseInt(h); }
+    }
+
+    return res.json({
+      success: true,
+      insights: {
+        platforms: platformStats,
+        bestDayHour: { day: bestOverallDay, hour: bestOverallHour },
+        totalPosts: posts.length,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
