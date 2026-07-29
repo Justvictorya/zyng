@@ -38,7 +38,7 @@ export const OAUTH_CONFIG: Record<string, OAuthPlatform> = {
     tokenUrl: "https://open.tiktokapis.com/v2/oauth/token/",
     clientIdEnv: "TIKTOK_CLIENT_ID",
     clientSecretEnv: "TIKTOK_CLIENT_SECRET",
-    scope: "user.info.basic video.upload video.publish",
+    scope: "user.info.basic,video.upload,video.publish",
     profileUrl: "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name",
     profileParser: (data: any) => ({ platformUserId: data.data?.user?.open_id, platformUserName: data.data?.user?.display_name }),
     needsPkce: true,
