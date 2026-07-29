@@ -242,7 +242,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
 
   const postInfo = {
     title: caption,
-    privacy_level: "SELF_ONLY" as const,
+    privacy_level: "PUBLIC_TO_EVERYONE" as const,
     disable_duet: false,
     disable_comment: false,
     disable_stitch: false,
