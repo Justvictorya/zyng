@@ -57,15 +57,12 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: "Free plan limited to 2 connected channels. Upgrade to Pro." });
     }
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const { count } = await supabase
-      .from("posts")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", monthStart.toISOString());
-    if (count && count >= 10) {
+    const meta = userData.user.user_metadata || {};
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const postMonth = meta.post_month;
+    const postCount = meta.post_count || 0;
+    const monthlyCount = postMonth === currentMonth ? postCount : 0;
+    if (monthlyCount >= 10) {
       return res.status(403).json({ success: false, error: "Free plan limited to 10 posts per month. Upgrade to Pro for unlimited." });
     }
   }
@@ -120,6 +117,17 @@ router.post("/", async (req: Request, res: Response) => {
       } catch (err: any) {
         console.error(`[Publisher] Post ${data.id} publish error:`, err);
       }
+    }
+
+    // Increment monthly post counter for Free tier
+    if (tier === "Free") {
+      const meta = userData.user.user_metadata || {};
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const postMonth = meta.post_month;
+      const postCount = postMonth === currentMonth ? (meta.post_count || 0) + 1 : 1;
+      await adminAuth.updateUserById(userId, {
+        user_metadata: { ...meta, post_month: currentMonth, post_count: postCount },
+      });
     }
 
     return res.json({ success: true, post: { ...data, media_urls: JSON.stringify(urls) }, publishResults });
