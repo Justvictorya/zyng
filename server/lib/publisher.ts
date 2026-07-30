@@ -283,7 +283,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       try {
         initData = JSON.parse(initText);
       } catch {
-        return { error: { message: `TikTok init returned non-JSON (status ${initRes.status}): ${initText.substring(0, 200)}` } };
+        return { error: { message: `TikTok init returned non-JSON (status ${initRes.status}): ${initText.substring(0, 200)}`, code: initRes.status } };
       }
 
       if (initData.error?.code !== "ok" && initData.error?.code !== 0) {
