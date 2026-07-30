@@ -306,6 +306,25 @@ router.post("/bulk", async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: "Maximum 50 posts per batch" });
   }
 
+  // Free tier check
+  const { data: userData, error: userError } = await adminAuth.getUserById(userId);
+  if (userError) return res.status(500).json({ success: false, error: userError.message });
+  const tier = userData.user?.user_metadata?.tier || "Free";
+  if (tier === "Free") {
+    const meta = userData.user.user_metadata || {};
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const postMonth = meta.post_month;
+    const postCount = meta.post_count || 0;
+    const monthlyCount = postMonth === currentMonth ? postCount : 0;
+    const remaining = 10 - monthlyCount;
+    if (remaining <= 0) {
+      return res.status(403).json({ success: false, error: "Free plan limited to 10 posts per month. Upgrade to Pro for unlimited." });
+    }
+    if (csvPosts.length > remaining) {
+      return res.status(403).json({ success: false, error: `Free plan allows only ${remaining} more post${remaining === 1 ? "" : "s"} this month. Reduce batch size or upgrade to Pro.` });
+    }
+  }
+
   const created = [];
   const errors = [];
 
@@ -335,6 +354,17 @@ router.post("/bulk", async (req: Request, res: Response) => {
     } catch (err: any) {
       errors.push({ index: i, error: err.message });
     }
+  }
+
+  // Increment monthly post counter for Free tier
+  if (tier === "Free" && created.length > 0) {
+    const meta = userData.user.user_metadata || {};
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const postMonth = meta.post_month;
+    const postCount = postMonth === currentMonth ? (meta.post_count || 0) + created.length : created.length;
+    await adminAuth.updateUserById(userId, {
+      user_metadata: { ...meta, post_month: currentMonth, post_count: postCount },
+    });
   }
 
   return res.json({ success: true, created: created.length, errors });
