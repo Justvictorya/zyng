@@ -238,7 +238,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
   const hasVideo = mediaUrls.some(isVideoUrl);
   const hasImage = mediaUrls.some(isImageUrl);
 
-  const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks (TikTok standard)
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
 
   const postInfo = {
     title: caption,
@@ -257,8 +257,12 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       if (!videoRes.ok) return { error: { message: `Failed to fetch video: ${videoRes.status}` } };
       const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
       const videoSize = videoBuffer.length;
-      const totalChunkCount = Math.ceil(videoSize / chunkSize);
-      console.log(`[TikTok] Video: ${videoSize} bytes, chunk_size: ${chunkSize}, total_chunks: ${totalChunkCount}`);
+
+      // TikTok: total_chunk_count = floor(video_size / chunk_size), last chunk absorbs remainder
+      const rawChunkCount = Math.floor(videoSize / chunkSize);
+      const totalChunkCount = rawChunkCount > 0 ? rawChunkCount : 1;
+      const initChunkSize = rawChunkCount > 0 ? chunkSize : videoSize;
+      console.log(`[TikTok] Video: ${videoSize} bytes, chunk_size: ${initChunkSize}, total_chunks: ${totalChunkCount}`);
 
       const initRes = await fetch("https://open.tiktokapis.com/v2/post/publish/video/init/", {
         method: "POST",
@@ -272,7 +276,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
           source_info: {
             source: "FILE_UPLOAD",
             video_size: videoSize,
-            chunk_size: chunkSize,
+            chunk_size: initChunkSize,
             total_chunk_count: totalChunkCount,
           },
         }),
@@ -296,20 +300,23 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const serverChunkSize = initData.data?.chunk_size;
       if (!uploadUrl) return { error: { message: "No upload_url returned from TikTok init" } };
 
-      // Use server-returned chunk size if provided, otherwise our default
-      const actualChunkSize = serverChunkSize || chunkSize;
-      console.log(`[TikTok] Using chunk_size: ${actualChunkSize}`);
+      // Use server-returned chunk size if provided, otherwise our init value
+      const effectiveChunkSize = serverChunkSize || initChunkSize;
 
-      const actualChunkCount = Math.ceil(videoBuffer.length / actualChunkSize);
-      console.log(`[TikTok] Uploading with chunk_size: ${actualChunkSize}, total_chunks: ${actualChunkCount}`);
+      // Recalculate with floor — last chunk absorbs remainder
+      const rawUploadChunks = Math.floor(videoBuffer.length / effectiveChunkSize);
+      const uploadChunkCount = rawUploadChunks > 0 ? rawUploadChunks : 1;
+      console.log(`[TikTok] Uploading with chunk_size: ${effectiveChunkSize}, total_chunks: ${uploadChunkCount}`);
 
-      for (let chunkIndex = 0; chunkIndex < actualChunkCount; chunkIndex++) {
-        const start = chunkIndex * actualChunkSize;
-        const end = Math.min(start + actualChunkSize, videoBuffer.length) - 1;
+      for (let chunkIndex = 0; chunkIndex < uploadChunkCount; chunkIndex++) {
+        const start = chunkIndex * effectiveChunkSize;
+        const end = chunkIndex === uploadChunkCount - 1
+          ? videoBuffer.length - 1
+          : start + effectiveChunkSize - 1;
         const chunk = videoBuffer.subarray(start, end + 1);
 
         const contentRange = `bytes ${start}-${end}/${videoBuffer.length}`;
-        console.log(`[TikTok] Uploading chunk ${chunkIndex + 1}/${actualChunkCount}: ${contentRange}`);
+        console.log(`[TikTok] Uploading chunk ${chunkIndex + 1}/${uploadChunkCount}: ${contentRange} (${chunk.length} bytes)`);
 
         const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
