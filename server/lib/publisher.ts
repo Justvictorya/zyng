@@ -276,8 +276,15 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
           },
         }),
       });
-      const initData = await initRes.json();
-      console.log("[TikTok] Video init response:", JSON.stringify(initData).substring(0, 500));
+      const initText = await initRes.text();
+      console.log(`[TikTok] Video init status: ${initRes.status}, body: ${initText.substring(0, 500)}`);
+
+      let initData: any;
+      try {
+        initData = JSON.parse(initText);
+      } catch {
+        return { error: { message: `TikTok init returned non-JSON (status ${initRes.status}): ${initText.substring(0, 200)}` } };
+      }
 
       if (initData.error?.code !== "ok" && initData.error?.code !== 0) {
         return { error: { message: initData.error?.message || JSON.stringify(initData.error) } };
