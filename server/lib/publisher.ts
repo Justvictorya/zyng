@@ -252,8 +252,11 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
     const videoUrl = mediaUrls.find(isVideoUrl) || mediaUrls[0];
 
     const doTikTokVideoUpload = async (token: string, chunkSize: number) => {
-      const headRes = await fetch(videoUrl, { method: "HEAD" });
-      const videoSize = parseInt(headRes.headers.get("content-length") || "0", 10);
+      // Download video first to get actual size (HEAD content-length may be missing from CDN)
+      const videoRes = await fetch(videoUrl);
+      if (!videoRes.ok) return { error: { message: `Failed to fetch video: ${videoRes.status}` } };
+      const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
+      const videoSize = videoBuffer.length;
       const totalChunkCount = Math.ceil(videoSize / chunkSize);
       console.log(`[TikTok] Video: ${videoSize} bytes, chunk_size: ${chunkSize}, total_chunks: ${totalChunkCount}`);
 
@@ -289,10 +292,6 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
       const actualChunkSize = serverChunkSize || chunkSize;
       console.log(`[TikTok] Using chunk_size: ${actualChunkSize}`);
 
-      const videoRes = await fetch(videoUrl);
-      if (!videoRes.ok) return { error: { message: `Failed to fetch video: ${videoRes.status}` } };
-      const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
-      console.log(`[TikTok] Downloaded video: ${videoBuffer.length} bytes`);
       const actualChunkCount = Math.ceil(videoBuffer.length / actualChunkSize);
       console.log(`[TikTok] Uploading with chunk_size: ${actualChunkSize}, total_chunks: ${actualChunkCount}`);
 
