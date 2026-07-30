@@ -265,6 +265,7 @@ async function publishToTikTok(account: any, caption: string, mediaUrls: string[
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json; charset=UTF-8",
+          "User-Agent": "Zyng-SocialManager/1.0",
         },
         body: JSON.stringify({
           post_info: postInfo,
