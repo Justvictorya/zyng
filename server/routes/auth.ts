@@ -72,6 +72,7 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
     const { data, error } = await adminAuth.createUser({
       email,
       password,
+      email_confirm: true,
       user_metadata: { full_name: name, tier: "Free" },
     });
 
@@ -118,6 +119,9 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
+      if ((error as any).code === "email_not_confirmed" || error.message?.includes("Email not confirmed")) {
+        return res.status(401).json({ success: false, error: "Please confirm your email address before logging in." });
+      }
       return res.status(401).json({ success: false, error: "Invalid email or password" });
     }
 
