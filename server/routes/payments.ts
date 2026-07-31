@@ -92,8 +92,11 @@ router.post("/verify", async (req: Request, res: Response) => {
     const secretKey = getPaystackSecret();
     if (!secretKey) {
       if (userId) {
+        const { data: existing } = await adminAuth.getUserById(userId);
+        const meta = existing?.user?.user_metadata || {};
         await adminAuth.updateUserById(userId, {
           user_metadata: {
+            ...meta,
             tier: "Pro",
             subscription_status: "active",
             subscription_plan: "Pro",
@@ -123,8 +126,11 @@ router.post("/verify", async (req: Request, res: Response) => {
     const plan = data.data.metadata?.plan || "Pro";
 
     if (userId) {
+      const { data: existing } = await adminAuth.getUserById(userId);
+      const meta = existing?.user?.user_metadata || {};
       await adminAuth.updateUserById(userId, {
         user_metadata: {
+          ...meta,
           tier: plan,
           subscription_status: "active",
           subscription_plan: plan,

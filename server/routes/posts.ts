@@ -12,6 +12,49 @@ function getUserId(req: Request): string | null {
   return req.userId || null;
 }
 
+// Monthly post counter backed by the post_usage table (never decremented on delete),
+// falling back to user_metadata for safety if the table is missing.
+async function getMonthlyPostCount(userId: string, currentMonth: string): Promise<number> {
+  try {
+    const { data, error } = await serviceDb
+      .from("post_usage")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("month", currentMonth)
+      .maybeSingle();
+    if (!error && data && typeof data.count === "number") return data.count;
+  } catch {}
+  const { data: userData, error: userError } = await adminAuth.getUserById(userId);
+  if (userError || !userData?.user) return 0;
+  const meta = userData.user.user_metadata || {};
+  return meta.post_month === currentMonth ? meta.post_count || 0 : 0;
+}
+
+async function incrementMonthlyPostCount(userId: string, currentMonth: string, amount: number) {
+  try {
+    const { data: existing, error } = await serviceDb
+      .from("post_usage")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("month", currentMonth)
+      .maybeSingle();
+    if (!error) {
+      const next = (existing?.count || 0) + amount;
+      const { error: upsertError } = await serviceDb
+        .from("post_usage")
+        .upsert({ user_id: userId, month: currentMonth, count: next }, { onConflict: "user_id,month" });
+      if (!upsertError) return;
+    }
+  } catch {}
+  const { data: userData, error: userError } = await adminAuth.getUserById(userId);
+  if (userError || !userData?.user) return;
+  const meta = userData.user.user_metadata || {};
+  const postCount = meta.post_month === currentMonth ? (meta.post_count || 0) + amount : amount;
+  await adminAuth.updateUserById(userId, {
+    user_metadata: { ...meta, post_month: currentMonth, post_count: postCount },
+  });
+}
+
 router.get("/", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) return res.status(400).json({ success: false, error: "user_id required" });
@@ -57,11 +100,8 @@ router.post("/", async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: "Free plan limited to 2 connected channels. Upgrade to Pro." });
     }
 
-    const meta = userData.user.user_metadata || {};
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const postMonth = meta.post_month;
-    const postCount = meta.post_count || 0;
-    const monthlyCount = postMonth === currentMonth ? postCount : 0;
+    const monthlyCount = await getMonthlyPostCount(userId, currentMonth);
     if (monthlyCount >= 10) {
       return res.status(403).json({ success: false, error: "Free plan limited to 10 posts per month. Upgrade to Pro for unlimited." });
     }
@@ -121,13 +161,8 @@ router.post("/", async (req: Request, res: Response) => {
 
     // Increment monthly post counter for Free tier
     if (tier === "Free") {
-      const meta = userData.user.user_metadata || {};
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const postMonth = meta.post_month;
-      const postCount = postMonth === currentMonth ? (meta.post_count || 0) + 1 : 1;
-      await adminAuth.updateUserById(userId, {
-        user_metadata: { ...meta, post_month: currentMonth, post_count: postCount },
-      });
+      await incrementMonthlyPostCount(userId, currentMonth, 1);
     }
 
     return res.json({ success: true, post: { ...data, media_urls: JSON.stringify(urls) }, publishResults });
@@ -311,11 +346,8 @@ router.post("/bulk", async (req: Request, res: Response) => {
   if (userError) return res.status(500).json({ success: false, error: userError.message });
   const tier = userData.user?.user_metadata?.tier || "Free";
   if (tier === "Free") {
-    const meta = userData.user.user_metadata || {};
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const postMonth = meta.post_month;
-    const postCount = meta.post_count || 0;
-    const monthlyCount = postMonth === currentMonth ? postCount : 0;
+    const monthlyCount = await getMonthlyPostCount(userId, currentMonth);
     const remaining = 10 - monthlyCount;
     if (remaining <= 0) {
       return res.status(403).json({ success: false, error: "Free plan limited to 10 posts per month. Upgrade to Pro for unlimited." });
@@ -358,13 +390,8 @@ router.post("/bulk", async (req: Request, res: Response) => {
 
   // Increment monthly post counter for Free tier
   if (tier === "Free" && created.length > 0) {
-    const meta = userData.user.user_metadata || {};
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const postMonth = meta.post_month;
-    const postCount = postMonth === currentMonth ? (meta.post_count || 0) + created.length : created.length;
-    await adminAuth.updateUserById(userId, {
-      user_metadata: { ...meta, post_month: currentMonth, post_count: postCount },
-    });
+    await incrementMonthlyPostCount(userId, currentMonth, created.length);
   }
 
   return res.json({ success: true, created: created.length, errors });

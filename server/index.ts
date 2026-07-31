@@ -135,6 +135,27 @@ import { serviceDb } from "./lib/supabase";
   } catch {}
 })();
 
+// Auto-migrate: create post_usage table for deletion-proof free tier counter
+(async () => {
+  try {
+    const { error } = await serviceDb.from("post_usage").select("user_id").limit(1);
+    if (error && error.message?.includes("does not exist")) {
+      console.log("[Migration] Creating post_usage table...");
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: serviceKey!, Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({
+          query: "CREATE TABLE IF NOT EXISTS post_usage (user_id UUID NOT NULL, month TEXT NOT NULL, count INT NOT NULL DEFAULT 0, PRIMARY KEY (user_id, month))",
+        }),
+      });
+      if (res.ok) console.log("[Migration] post_usage table created.");
+      else console.warn("[Migration] Could not create post_usage automatically — run SQL manually.");
+    }
+  } catch {}
+})();
+
 // Error handler — after all routes
 app.use(errorHandler);
 
