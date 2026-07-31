@@ -29,7 +29,7 @@ export default function SignupPage() {
     setError("");
 
     if (!agreeTerms) {
-      setError("Abeg you must agree to terms of usage first!");
+      setError("Please agree to the Terms of Service first.");
       return;
     }
 
