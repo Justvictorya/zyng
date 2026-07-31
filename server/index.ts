@@ -171,6 +171,12 @@ async function startServer() {
   } else {
     console.log("Starting Zyng in production mode...");
     const distPath = path.join(process.cwd(), "dist");
+    app.use((req, res, next) => {
+      if (req.path === "/favicon.ico" || req.path === "/favicon.svg" || req.path.startsWith("/icon-")) {
+        res.set("Cache-Control", "public, max-age=604800, immutable");
+      }
+      next();
+    });
     app.use(express.static(distPath));
     app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
