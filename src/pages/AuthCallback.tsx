@@ -59,6 +59,10 @@ export default function AuthCallback() {
         localStorage.setItem("zyng_user", JSON.stringify(data.user));
         if (data.session?.access_token) {
           localStorage.setItem("zyng_token", data.session.access_token);
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token || "",
+          });
         }
         if (data.session?.refresh_token) {
           localStorage.setItem("zyng_refresh_token", data.session.refresh_token);

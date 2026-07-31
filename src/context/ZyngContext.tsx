@@ -105,12 +105,17 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Supabase onAuthStateChange — syncs token to localStorage automatically
+  // Only overwrites when the current token is missing/expired so a stale Supabase
+  // session restored on page load can't clobber a valid custom-login token.
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.access_token) {
-        localStorage.setItem("zyng_token", session.access_token);
-        if (session.refresh_token) {
-          localStorage.setItem("zyng_refresh_token", session.refresh_token);
+        const current = localStorage.getItem("zyng_token");
+        if (!current || isTokenExpired(current)) {
+          localStorage.setItem("zyng_token", session.access_token);
+          if (session.refresh_token) {
+            localStorage.setItem("zyng_refresh_token", session.refresh_token);
+          }
         }
       }
       if (event === "SIGNED_OUT") {
@@ -156,6 +161,7 @@ export function ZyngProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("zyng_user");
     localStorage.removeItem("zyng_token");
     localStorage.removeItem("zyng_refresh_token");
+    supabase.auth.signOut();
   };
 
   const handlePostDeleted = (id: string) => {

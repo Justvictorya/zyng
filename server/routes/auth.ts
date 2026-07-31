@@ -6,6 +6,49 @@ import { env } from "../config/env";
 import { OAUTH_CONFIG, getOauthClientId, getOauthClientSecret } from "../config/oauth";
 import rateLimit from "express-rate-limit";
 
+async function createSessionForExistingUser(email: string): Promise<{ access_token: string; refresh_token: string } | null> {
+  const sbUrl = env("SUPABASE_URL");
+  const sbKey = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!sbUrl || !sbKey) return null;
+
+  try {
+    const linkRes = await fetch(`${sbUrl}/auth/v1/admin/generate_link`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sbKey}`,
+        apikey: sbKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ type: "magiclink", email }),
+    });
+    const linkData = await linkRes.json();
+    const token = linkData?.properties?.email_otp || linkData?.properties?.hashed_token;
+    if (!token) {
+      console.error("[Auth] generateLink no token:", JSON.stringify(linkData).slice(0, 300));
+      return null;
+    }
+
+    const verifyRes = await fetch(`${sbUrl}/auth/v1/verify`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sbKey}`,
+        apikey: sbKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ type: "magiclink", email, token }),
+    });
+    const verifyData = await verifyRes.json();
+    if (verifyData?.access_token && verifyData?.refresh_token) {
+      return { access_token: verifyData.access_token, refresh_token: verifyData.refresh_token };
+    }
+    console.error("[Auth] verify failed:", JSON.stringify(verifyData).slice(0, 300));
+    return null;
+  } catch (e: any) {
+    console.error("[Auth] createSessionForExistingUser error:", e.message);
+    return null;
+  }
+}
+
 const router = Router();
 
 const authLimiter = rateLimit({
@@ -283,11 +326,13 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
     const password = crypto.randomUUID() + "Zyng!2";
 
     let userId: string;
+    let isExistingUser = false;
+    let existingUserMeta: any = null;
 
     const { data: newUser, error: createErr } = await adminAuth.createUser({
       email,
       password,
-      user_metadata: { full_name: name },
+      user_metadata: { full_name: name, social_only: true },
       email_confirm: true,
     });
 
@@ -339,8 +384,9 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
         console.log(`[Auth] Created user with fallback email: ${fallbackEmail}`);
       } else {
         userId = existingUser.id;
-        await adminAuth.updateUserById(userId, { password });
-        console.log(`[Auth] Found and updated existing user for ${platform}: ${email} (${userId})`);
+        isExistingUser = true;
+        existingUserMeta = existingUser.user_metadata || {};
+        console.log(`[Auth] Found existing user for ${platform}: ${email} (${userId})`);
       }
     }
 
@@ -353,13 +399,35 @@ router.post("/social-login/:platform", async (req: Request, res: Response) => {
       avatar,
     };
 
-    const { data: sd, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInErr) {
-      console.error(`[Auth] signInWithPassword failed after social login:`, signInErr.message);
+    let session: { access_token: string; refresh_token: string } | undefined;
+
+    const isSocialOnly = existingUserMeta?.social_only === true;
+
+    if (!isExistingUser || isSocialOnly) {
+      // New user, or existing social-only user (password is a generated random — safe to refresh)
+      if (isExistingUser) {
+        await adminAuth.updateUserById(userId, { password });
+      }
+      const { data: sd, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInErr) {
+        console.error(`[Auth] signInWithPassword failed after social login:`, signInErr.message);
+      }
+      if (sd?.session) {
+        session = { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token };
+      }
+    } else {
+      // Existing user with a real email password — DO NOT touch their password.
+      // Mint a session via magic link so their email login keeps working.
+      session = await createSessionForExistingUser(email);
+      if (!session) {
+        console.error(`[Auth] Could not create session for existing user ${email}`);
+        return res.status(500).json({ success: false, error: "Could not create a session. Please log in with your email and password." });
+      }
     }
+
     return res.json({
       success: true, user,
-      session: sd?.session ? { access_token: sd.session.access_token, refresh_token: sd.session.refresh_token } : undefined,
+      session,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
