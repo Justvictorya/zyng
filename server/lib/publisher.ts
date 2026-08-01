@@ -171,8 +171,52 @@ async function refreshToken(platform: string, account: any): Promise<string | nu
 }
 
 async function publishToFacebook(account: any, caption: string, mediaUrls: string[]): Promise<PublishResult> {
+  const images = mediaUrls.filter(isImageUrl);
+  const videos = mediaUrls.filter(isVideoUrl);
+
   const postToFb = async (token: string) => {
-    const r = await fetch(`https://graph.facebook.com/v22.0/${account.platform_user_id}/feed`, {
+    const base = `https://graph.facebook.com/v22.0/${account.platform_user_id}`;
+
+    if (videos.length > 0) {
+      const r = await fetch(`${base}/videos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_url: videos[0], description: caption, access_token: token }),
+      });
+      return r.json();
+    }
+
+    if (images.length === 1) {
+      const r = await fetch(`${base}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: images[0], caption, access_token: token }),
+      });
+      return r.json();
+    }
+
+    if (images.length > 1) {
+      const attached_media = [];
+      for (const img of images) {
+        const cr = await fetch(`${base}/photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: img, published: false, access_token: token }),
+        });
+        const cj = await cr.json();
+        if (cj.id) attached_media.push({ media_fbid: cj.id });
+      }
+      if (attached_media.length > 0) {
+        const r = await fetch(`${base}/feed`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: caption, attached_media: JSON.stringify(attached_media), access_token: token }),
+        });
+        return r.json();
+      }
+    }
+
+    const r = await fetch(`${base}/feed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: caption, access_token: token }),
