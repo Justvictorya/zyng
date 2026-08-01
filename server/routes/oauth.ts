@@ -175,38 +175,49 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     const { platformUserId, platformUserName } = cfg.profileParser(profileData);
 
     if (platform === "instagram") {
-      let igUserId = platformUserId;
-      let igUserName = platformUserName;
+      let igUserId: string | null = null;
+      let igUserName = "";
+      let fbAccountId = platformUserId;
+      let fbAccountName = platformUserName;
+      let fbAccountToken = accessToken;
 
       try {
-        // First check user-level instagram_business_account field
+        // Fetch user profile + their Pages + any linked Instagram business accounts in one call
         const userRes = await fetch(
-          "https://graph.facebook.com/v22.0/me?fields=id,name,instagram_business_account{id,username}",
+          "https://graph.facebook.com/v22.0/me?fields=id,name,instagram_business_account{id,username},accounts{id,name,access_token,instagram_business_account{id,username}}",
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const userData = await userRes.json();
+
         if (userData?.instagram_business_account?.id) {
           igUserId = userData.instagram_business_account.id;
           igUserName = userData.instagram_business_account.username;
-          console.log("[OAuth] Found IG account from user profile:", igUserId, igUserName);
-        } else {
-          // Fall back to checking pages
-          const pagesRes = await fetch(
-            "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,instagram_business_account{id,username}",
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          );
-          const pagesData = await pagesRes.json();
-          const page = pagesData.data?.find((p: any) => p.instagram_business_account);
-          if (page?.instagram_business_account) {
-            igUserId = page.instagram_business_account.id;
-            igUserName = page.instagram_business_account.username;
-            console.log("[OAuth] Found IG account from page:", igUserId, igUserName);
-          } else {
-            console.warn("[OAuth] No Instagram Business Account found in user or pages. userData:", JSON.stringify(userData));
-          }
+        }
+
+        const pages = userData?.accounts?.data || [];
+        const page = pages.find((p: any) => p.instagram_business_account?.id) || pages[0];
+        if (!igUserId && page?.instagram_business_account?.id) {
+          igUserId = page.instagram_business_account.id;
+          igUserName = page.instagram_business_account.username;
+        }
+        if (page?.id) {
+          fbAccountId = page.id;
+          fbAccountName = page.name;
+          fbAccountToken = page.access_token || accessToken;
         }
       } catch (e) {
         console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
+      }
+
+      if (!igUserId) {
+        return res.redirect("/?error=No Instagram Business Account found. Switch your Instagram to a Professional account and link it to a Facebook Page, then try connecting again.");
+      }
+
+      // Clear stale connections so only the corrected Page/Business accounts remain
+      try {
+        await serviceDb.from("connected_accounts").delete().eq("user_id", userId).in("platform", ["instagram", "facebook"]);
+      } catch (e) {
+        console.warn("[OAuth] Could not clear stale connections:", e);
       }
 
       const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
@@ -226,14 +237,14 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
         return res.redirect(`/?error=Failed to save Instagram connection`);
       }
 
-      // Also save/update Facebook connection with the same token
+      // Also save/update the linked Facebook Page with a Page token
       try {
         const { error: fbErr } = await supabase.rpc("upsert_connected_account", {
           p_user_id: userId,
           p_platform: "facebook",
-          p_platform_user_id: platformUserId,
-          p_platform_user_name: platformUserName,
-          p_access_token: accessToken,
+          p_platform_user_id: fbAccountId,
+          p_platform_user_name: fbAccountName,
+          p_access_token: fbAccountToken,
           p_token_expires_at: tokenData.expires_in
             ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
             : null,
@@ -247,12 +258,45 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
       return res.redirect(`/dashboard/settings?connected=instagram`);
     }
 
+    // Non-Instagram platforms: for Facebook, store the managed Page (with Page token)
+    // so posting targets the Page instead of the user's personal timeline.
+    let targetId = platformUserId;
+    let targetName = platformUserName;
+    let targetToken = accessToken;
+
+    if (platform === "facebook") {
+      try {
+        const pagesRes = await fetch(
+          "https://graph.facebook.com/v22.0/me/accounts?fields=id,name,access_token",
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const pagesData = await pagesRes.json();
+        const page = pagesData.data?.[0];
+        if (page?.id) {
+          targetId = page.id;
+          targetName = page.name;
+          targetToken = page.access_token || accessToken;
+        } else {
+          return res.redirect("/?error=No Facebook Page found. Create a Page (or add yourself as admin to one) and try again.");
+        }
+      } catch (e) {
+        console.warn("[OAuth] Could not fetch Facebook Pages:", e);
+      }
+    }
+
+    // Clear stale connections so only the corrected account remains
+    try {
+      await serviceDb.from("connected_accounts").delete().eq("user_id", userId).eq("platform", platform);
+    } catch (e) {
+      console.warn("[OAuth] Could not clear stale connections:", e);
+    }
+
     const { error: upsertError } = await supabase.rpc("upsert_connected_account", {
       p_user_id: userId,
       p_platform: platform,
-      p_platform_user_id: platformUserId,
-      p_platform_user_name: platformUserName,
-      p_access_token: accessToken,
+      p_platform_user_id: targetId,
+      p_platform_user_name: targetName,
+      p_access_token: targetToken,
       p_token_expires_at: tokenData.expires_in
         ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
         : null,
