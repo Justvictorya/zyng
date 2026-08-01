@@ -35,6 +35,46 @@ async function getOAuthState(stateId: string) {
   }
 }
 
+// Pending "pick a Page" selection, stored in oauth_states so it survives without a new table
+async function savePendingPick(token: string, userId: string, platform: string, data: any) {
+  try {
+    await serviceDb.from("oauth_states").insert({
+      state_id: token,
+      user_id: userId,
+      csrf: `pick:${platform}`,
+      code_verifier: JSON.stringify(data),
+    });
+    setTimeout(async () => {
+      await serviceDb.from("oauth_states").delete().eq("state_id", token);
+    }, 10 * 60 * 1000);
+  } catch (e) {
+    console.error("[OAuth] Failed to save pending pick:", e);
+  }
+}
+
+async function readPendingPick(token: string) {
+  try {
+    const { data } = await serviceDb.from("oauth_states").select("*").eq("state_id", token).single();
+    if (!data || !String(data.csrf || "").startsWith("pick:")) return null;
+    return {
+      platform: String(data.csrf).replace("pick:", ""),
+      userId: data.user_id,
+      ...JSON.parse(data.code_verifier || "{}"),
+    };
+  } catch (e) {
+    console.error("[OAuth] Failed to read pending pick:", e);
+    return null;
+  }
+}
+
+async function deletePendingPick(token: string) {
+  try {
+    await serviceDb.from("oauth_states").delete().eq("state_id", token);
+  } catch (e) {
+    console.warn("[OAuth] Failed to clear pending pick:", e);
+  }
+}
+
 router.get("/:platform/connect", requireAuth, async (req: Request, res: Response) => {
   const { platform } = req.params;
   const userId = req.userId!;
@@ -177,9 +217,7 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     if (platform === "instagram") {
       let igUserId: string | null = null;
       let igUserName = "";
-      let fbAccountId = platformUserId;
-      let fbAccountName = platformUserName;
-      let fbAccountToken = accessToken;
+      let pages: any[] = [];
 
       try {
         // Fetch user profile + their Pages + any linked Instagram business accounts in one call
@@ -188,22 +226,17 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const userData = await userRes.json();
+        pages = userData?.accounts?.data || [];
 
         if (userData?.instagram_business_account?.id) {
           igUserId = userData.instagram_business_account.id;
           igUserName = userData.instagram_business_account.username;
         }
 
-        const pages = userData?.accounts?.data || [];
         const page = pages.find((p: any) => p.instagram_business_account?.id) || pages[0];
         if (!igUserId && page?.instagram_business_account?.id) {
           igUserId = page.instagram_business_account.id;
           igUserName = page.instagram_business_account.username;
-        }
-        if (page?.id) {
-          fbAccountId = page.id;
-          fbAccountName = page.name;
-          fbAccountToken = page.access_token || accessToken;
         }
       } catch (e) {
         console.warn("[OAuth] Could not fetch Instagram Business Account:", e);
@@ -211,6 +244,37 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
 
       if (!igUserId) {
         return res.redirect("/?error=No Instagram Business Account found. Switch your Instagram to a Professional account and link it to a Facebook Page, then try connecting again.");
+      }
+
+      // Candidate pages = those with a linked Instagram business account
+      const pickable = pages.filter((p: any) => p.instagram_business_account?.id);
+      const candidates = pickable.length > 0 ? pickable : pages;
+
+      // Multiple pages: let the user choose which Page (and its Instagram) to use
+      if (candidates.length > 1) {
+        const pickToken = crypto.randomUUID();
+        await savePendingPick(pickToken, userId, "instagram", {
+          accessToken,
+          expiresIn: tokenData.expires_in || null,
+          refreshToken: tokenData.refresh_token || null,
+          pages: candidates.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            token: p.access_token || accessToken,
+            igId: p.instagram_business_account?.id,
+            igUsername: p.instagram_business_account?.username,
+          })),
+        });
+        return res.redirect(`/connect/pick-page?token=${pickToken}`);
+      }
+
+      const chosen = candidates[0];
+      const fbAccountId = chosen?.id || platformUserId;
+      const fbAccountName = chosen?.name || platformUserName;
+      const fbAccountToken = chosen?.access_token || accessToken;
+      if (chosen?.instagram_business_account?.id) {
+        igUserId = chosen.instagram_business_account.id;
+        igUserName = chosen.instagram_business_account.username;
       }
 
       // Clear stale connections so only the corrected Page/Business accounts remain
@@ -271,14 +335,31 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const pagesData = await pagesRes.json();
-        const page = pagesData.data?.[0];
-        if (page?.id) {
-          targetId = page.id;
-          targetName = page.name;
-          targetToken = page.access_token || accessToken;
-        } else {
+        const pages = pagesData.data || [];
+
+        if (pages.length === 0) {
           return res.redirect("/?error=No Facebook Page found. Create a Page (or add yourself as admin to one) and try again.");
         }
+
+        if (pages.length > 1) {
+          const pickToken = crypto.randomUUID();
+          await savePendingPick(pickToken, userId, "facebook", {
+            accessToken,
+            expiresIn: tokenData.expires_in || null,
+            refreshToken: tokenData.refresh_token || null,
+            pages: pages.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              token: p.access_token || accessToken,
+            })),
+          });
+          return res.redirect(`/connect/pick-page?token=${pickToken}`);
+        }
+
+        const page = pages[0];
+        targetId = page.id;
+        targetName = page.name;
+        targetToken = page.access_token || accessToken;
       } catch (e) {
         console.warn("[OAuth] Could not fetch Facebook Pages:", e);
       }
@@ -313,6 +394,97 @@ router.get("/:platform/callback", async (req: Request, res: Response) => {
     console.error(`[OAuth] Callback error for ${platform}:`, err.message);
     res.redirect("/?error=OAuth connection failed");
   }
+});
+
+router.get("/pending/:token", requireAuth, async (req: Request, res: Response) => {
+  const pending = await readPendingPick(req.params.token);
+  if (!pending) {
+    return res.status(404).json({ success: false, error: "This selection has expired. Please connect again." });
+  }
+  if (pending.userId !== req.userId) {
+    return res.status(403).json({ success: false, error: "Not authorized" });
+  }
+  res.json({
+    success: true,
+    platform: pending.platform,
+    pages: (pending.pages || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      igUsername: p.igUsername || null,
+    })),
+  });
+});
+
+router.post("/pending/:token/complete", requireAuth, async (req: Request, res: Response) => {
+  const pending = await readPendingPick(req.params.token);
+  if (!pending) {
+    return res.status(404).json({ success: false, error: "This selection has expired. Please connect again." });
+  }
+  if (pending.userId !== req.userId) {
+    return res.status(403).json({ success: false, error: "Not authorized" });
+  }
+
+  const { pageId } = req.body || {};
+  const chosen = (pending.pages || []).find((p: any) => p.id === pageId);
+  if (!chosen) {
+    return res.status(400).json({ success: false, error: "Please choose a Facebook Page" });
+  }
+
+  const expiresAt = pending.expiresIn ? new Date(Date.now() + pending.expiresIn * 1000).toISOString() : null;
+
+  try {
+    const platformsToClear = pending.platform === "instagram" ? ["instagram", "facebook"] : [pending.platform];
+    await serviceDb.from("connected_accounts").delete().eq("user_id", pending.userId).in("platform", platformsToClear);
+  } catch (e) {
+    console.warn("[OAuth] Could not clear stale connections:", e);
+  }
+
+  if (pending.platform === "instagram") {
+    const { error: igErr } = await supabase.rpc("upsert_connected_account", {
+      p_user_id: pending.userId,
+      p_platform: "instagram",
+      p_platform_user_id: chosen.igId,
+      p_platform_user_name: chosen.igUsername,
+      p_access_token: pending.accessToken,
+      p_token_expires_at: expiresAt,
+      p_refresh_token: pending.refreshToken || null,
+    });
+    if (igErr) {
+      console.error("[OAuth] Instagram upsert error:", igErr);
+      return res.status(500).json({ success: false, error: "Failed to save Instagram connection" });
+    }
+
+    const { error: fbErr } = await supabase.rpc("upsert_connected_account", {
+      p_user_id: pending.userId,
+      p_platform: "facebook",
+      p_platform_user_id: chosen.id,
+      p_platform_user_name: chosen.name,
+      p_access_token: chosen.token,
+      p_token_expires_at: expiresAt,
+      p_refresh_token: pending.refreshToken || null,
+    });
+    if (fbErr) console.warn("[OAuth] Facebook upsert failed:", fbErr);
+
+    await deletePendingPick(req.params.token);
+    return res.json({ success: true, platform: "instagram" });
+  }
+
+  const { error: upErr } = await supabase.rpc("upsert_connected_account", {
+    p_user_id: pending.userId,
+    p_platform: "facebook",
+    p_platform_user_id: chosen.id,
+    p_platform_user_name: chosen.name,
+    p_access_token: chosen.token,
+    p_token_expires_at: expiresAt,
+    p_refresh_token: pending.refreshToken || null,
+  });
+  if (upErr) {
+    console.error("[OAuth] Facebook upsert error:", upErr);
+    return res.status(500).json({ success: false, error: "Failed to save Facebook connection" });
+  }
+
+  await deletePendingPick(req.params.token);
+  return res.json({ success: true, platform: "facebook" });
 });
 
 router.get("/accounts", requireAuth, async (req: Request, res: Response) => {

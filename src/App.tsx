@@ -8,6 +8,7 @@ import AuthCallback from "./pages/AuthCallback";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import DataDeletionPage from "./pages/DataDeletionPage";
+import PickPagePage from "./pages/PickPagePage";
 import DashboardLayout from "./pages/DashboardLayout";
 
 import ViewDashboard from "./components/ViewDashboard";
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/data-deletion" element={<DataDeletionPage />} />
+        <Route path="/connect/pick-page" element={<PickPagePage />} />
 
         <Route
           path="/dashboard"
