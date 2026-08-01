@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Zap, ArrowRight, Calendar, Wand2, Globe, BarChart3,
   Check, Sparkles, Shield, Star
@@ -85,6 +86,15 @@ const PLANS = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [urlError, setUrlError] = useState(() => {
+    const q = new URLSearchParams(window.location.search).get("error");
+    return q || "";
+  });
+  useEffect(() => {
+    if (urlError) {
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#050507] text-white" id="landing-screen">
@@ -108,6 +118,12 @@ export default function LandingPage() {
           <button onClick={() => navigate("/signup")} className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-900/20 transition-all hover:-translate-y-0.5">Get Started</button>
         </div>
       </header>
+
+      {urlError && (
+        <div className="relative z-10 w-full max-w-3xl mx-auto px-6">
+          <div className="bg-rose-950 border border-rose-500/40 text-rose-300 text-xs px-4 py-3 rounded-xl font-medium">{urlError.replace(/\+/g, " ")}</div>
+        </div>
+      )}
 
       {/* HERO */}
       <section className="relative z-10 w-full max-w-5xl mx-auto text-center px-6 pt-16 pb-20">
